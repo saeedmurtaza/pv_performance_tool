@@ -1,0 +1,2257 @@
+[
+  {
+    "name": "Jongno-gu",
+    "lat": 37.5703777777777,
+    "lon": 126.981641666666
+  },
+  {
+    "name": "Jongno-gu - Cheongunhyojadong",
+    "lat": 37.5841367,
+    "lon": 126.9706519
+  },
+  {
+    "name": "Jongno-gu - Sajik-dong",
+    "lat": 37.5732694444444,
+    "lon": 126.970955555555
+  },
+  {
+    "name": "Jongno-gu - Samcheong-dong",
+    "lat": 37.582425,
+    "lon": 126.983977777777
+  },
+  {
+    "name": "Jongno-gu - Buam-dong",
+    "lat": 37.5898555555555,
+    "lon": 126.966444444444
+  },
+  {
+    "name": "Jongno-gu - Pyeongchang-dong",
+    "lat": 37.6025222222222,
+    "lon": 126.968877777777
+  },
+  {
+    "name": "Jongno-gu - Muak-dong",
+    "lat": 37.5715388888888,
+    "lon": 126.961208333333
+  },
+  {
+    "name": "Jongno-gu - Gyo-nam-dong",
+    "lat": 37.569075,
+    "lon": 126.9641
+  },
+  {
+    "name": "Jongno-gu - Gahoe-dong",
+    "lat": 37.5772527777777,
+    "lon": 126.986911111111
+  },
+  {
+    "name": "Jongno-gu - Jongno 1.2.3.4 operation",
+    "lat": 37.5678861111111,
+    "lon": 126.991066666666
+  },
+  {
+    "name": "Jongno-gu - Jongno 5.6-ga",
+    "lat": 37.5692111111111,
+    "lon": 127.007155555555
+  },
+  {
+    "name": "Jongno-gu - Ihwa-dong",
+    "lat": 37.5742138888888,
+    "lon": 127.006397222222
+  },
+  {
+    "name": "Jongno-gu - Hyehwa-dong",
+    "lat": 37.5839888888888,
+    "lon": 127.002622222222
+  },
+  {
+    "name": "Jongno-gu - Changsin 1-dong",
+    "lat": 37.5679361111111,
+    "lon": 127.018463888888
+  },
+  {
+    "name": "Jongno-gu - Changsin 2nd building",
+    "lat": 37.5716444444444,
+    "lon": 127.012963888888
+  },
+  {
+    "name": "Jongno-gu - Changsin 3-dong",
+    "lat": 37.5750472222222,
+    "lon": 127.017163888888
+  },
+  {
+    "name": "Jongno-gu - Sungin 1-dong",
+    "lat": 37.5750277777777,
+    "lon": 127.017663888888
+  },
+  {
+    "name": "Jongno-gu - Sungin 2nd dong",
+    "lat": 37.5720361111111,
+    "lon": 127.022055555555
+  },
+  {
+    "name": "Jung-gu",
+    "lat": 37.5610027777777,
+    "lon": 126.999641666666
+  },
+  {
+    "name": "Jung-gu - Sogong-dong",
+    "lat": 37.5596305555555,
+    "lon": 126.979108333333
+  },
+  {
+    "name": "Jung-gu - Hoehyeon-dong",
+    "lat": 37.5544833333333,
+    "lon": 126.981444444444
+  },
+  {
+    "name": "Jung-gu - Myeongdong",
+    "lat": 37.5572361111111,
+    "lon": 126.987888888888
+  },
+  {
+    "name": "Jung-gu - Pil-dong",
+    "lat": 37.5573527777777,
+    "lon": 126.997711111111
+  },
+  {
+    "name": "Jung-gu - Jangchung-dong",
+    "lat": 37.5591166666666,
+    "lon": 127.009933333333
+  },
+  {
+    "name": "Jung-gu - Gwanghui-dong",
+    "lat": 37.5617305555555,
+    "lon": 127.007163888888
+  },
+  {
+    "name": "Jung-gu - Euljiro-dong",
+    "lat": 37.5639,
+    "lon": 126.993430555555
+  },
+  {
+    "name": "Jung-gu - Shindangdong",
+    "lat": 37.5593111111111,
+    "lon": 127.016633333333
+  },
+  {
+    "name": "Jung-gu - Dasan-dong",
+    "lat": 37.5516166666666,
+    "lon": 127.010308333333
+  },
+  {
+    "name": "Jung-gu - Yaksu-dong",
+    "lat": 37.5496583333333,
+    "lon": 127.011086111111
+  },
+  {
+    "name": "Jung-gu - Cheonggu-dong",
+    "lat": 37.5542583333333,
+    "lon": 127.016788888888
+  },
+  {
+    "name": "Jung-gu - Shindangje 5-dong",
+    "lat": 37.5623305555555,
+    "lon": 127.023966666666
+  },
+  {
+    "name": "Jung-gu - Dongwha-dong",
+    "lat": 37.5572277777777,
+    "lon": 127.021541666666
+  },
+  {
+    "name": "Jung-gu - Hwanghak-dong",
+    "lat": 37.5646638888888,
+    "lon": 127.023497222222
+  },
+  {
+    "name": "Jung-gu - Jungnim-dong",
+    "lat": 37.5520333333333,
+    "lon": 126.9666
+  },
+  {
+    "name": "Yongsan-gu",
+    "lat": 37.5360944444444,
+    "lon": 126.967522222222
+  },
+  {
+    "name": "Yongsan-gu - Huam-dong",
+    "lat": 37.5458805555555,
+    "lon": 126.980266666666
+  },
+  {
+    "name": "Yongsan-gu - Yongsan 2-ga-dong",
+    "lat": 37.5431194444444,
+    "lon": 126.987563888888
+  },
+  {
+    "name": "Yongsan-gu - Namyeong-dong",
+    "lat": 37.5428333333333,
+    "lon": 126.976966666666
+  },
+  {
+    "name": "Yongsan-gu - Cheongpa-dong",
+    "lat": 37.5425555555555,
+    "lon": 126.972041666666
+  },
+  {
+    "name": "Yongsan-gu - Wonhyo-ro 1-dong",
+    "lat": 37.5358694444444,
+    "lon": 126.968341666666
+  },
+  {
+    "name": "Yongsan-gu - Wonhyo-ro 2-dong",
+    "lat": 37.5315916666666,
+    "lon": 126.953577777777
+  },
+  {
+    "name": "Yongsan-gu - Hyochang-dong",
+    "lat": 37.5389527777777,
+    "lon": 126.963397222222
+  },
+  {
+    "name": "Yongsan-gu - Yongmun-dong",
+    "lat": 37.5362499999999,
+    "lon": 126.959663888888
+  },
+  {
+    "name": "Yongsan-gu - Han River Road",
+    "lat": 37.5262416666666,
+    "lon": 126.971533333333
+  },
+  {
+    "name": "Yongsan-gu - Ichon 1-dong",
+    "lat": 37.5184027777777,
+    "lon": 126.975355555555
+  },
+  {
+    "name": "Yongsan-gu - Ichon 2-dong",
+    "lat": 37.5240305555555,
+    "lon": 126.956330555555
+  },
+  {
+    "name": "Yongsan-gu - Itaewon 1-dong",
+    "lat": 37.5294916666666,
+    "lon": 126.997041666666
+  },
+  {
+    "name": "Yongsan-gu - Itaewon 2-dong",
+    "lat": 37.5379722222222,
+    "lon": 126.991844444444
+  },
+  {
+    "name": "Yongsan-gu - Hannam-dong",
+    "lat": 37.5318861111111,
+    "lon": 127.002644444444
+  },
+  {
+    "name": "Yongsan-gu - Servingo-dong",
+    "lat": 37.5176055555555,
+    "lon": 126.996777777777
+  },
+  {
+    "name": "Yongsan-gu - Bogwang-dong",
+    "lat": 37.5234638888888,
+    "lon": 127.002333333333
+  },
+  {
+    "name": "Seongdong-gu",
+    "lat": 37.5606111111111,
+    "lon": 127.039
+  },
+  {
+    "name": "Seongdong-gu - Wangsimni 2nd District",
+    "lat": 37.5583361111111,
+    "lon": 127.032711111111
+  },
+  {
+    "name": "Seongdong-gu - Wangsimni Doseon-dong",
+    "lat": 37.5677544,
+    "lon": 127.0255591
+  },
+  {
+    "name": "Seongdong-gu - Majang-dong",
+    "lat": 37.5634333333333,
+    "lon": 127.047563888888
+  },
+  {
+    "name": "Seongdong-gu - Sagundong",
+    "lat": 37.5584055555555,
+    "lon": 127.047955555555
+  },
+  {
+    "name": "Seongdong-gu - Haengdang 1-dong",
+    "lat": 37.5553527777777,
+    "lon": 127.038077777777
+  },
+  {
+    "name": "Seongdong-gu - Haengdang 2-dong",
+    "lat": 37.555575,
+    "lon": 127.031533333333
+  },
+  {
+    "name": "Seongdong-gu - Eungbong-dong",
+    "lat": 37.5503472222222,
+    "lon": 127.035497222222
+  },
+  {
+    "name": "Seongdong-gu - Geumho 1-ga-dong",
+    "lat": 37.5520694444444,
+    "lon": 127.023944444444
+  },
+  {
+    "name": "Seongdong-gu - Geumho 2.3 operation",
+    "lat": 37.553188,
+    "lon": 127.020859
+  },
+  {
+    "name": "Seongdong-gu - Geumho 4-ga-dong",
+    "lat": 37.5444722222222,
+    "lon": 127.024475
+  },
+  {
+    "name": "Seongdong-gu - Oksu-dong",
+    "lat": 37.543717,
+    "lon": 127.013463
+  },
+  {
+    "name": "Seongdong-gu - Seongsu 1-ga, Je 1-dong",
+    "lat": 37.5389583333333,
+    "lon": 127.051986111111
+  },
+  {
+    "name": "Seongdong-gu - Seongsu 1-ga 2-dong",
+    "lat": 37.5435277777777,
+    "lon": 127.046363888888
+  },
+  {
+    "name": "Seongdong-gu - Seongsu 2-ga 1-dong",
+    "lat": 37.5367027777777,
+    "lon": 127.0562
+  },
+  {
+    "name": "Seongdong-gu - Seongsu 2-ga 3-dong",
+    "lat": 37.5454305555555,
+    "lon": 127.057333333333
+  },
+  {
+    "name": "Seongdong-gu - Songjeong-dong",
+    "lat": 37.5517277777777,
+    "lon": 127.071708333333
+  },
+  {
+    "name": "Seongdong-gu - Yongdap-dong",
+    "lat": 37.5613666666666,
+    "lon": 127.057433333333
+  },
+  {
+    "name": "Gwangjin-gu",
+    "lat": 37.5357388888888,
+    "lon": 127.084533333333
+  },
+  {
+    "name": "Gwangjin-gu - Hwayang-dong",
+    "lat": 37.5437861111111,
+    "lon": 127.073463888888
+  },
+  {
+    "name": "Gwangjin-gu - Military automatic",
+    "lat": 37.5523527777777,
+    "lon": 127.077997222222
+  },
+  {
+    "name": "Gwangjin-gu - Junggok 1-dong",
+    "lat": 37.5578416666666,
+    "lon": 127.082163888888
+  },
+  {
+    "name": "Gwangjin-gu - Junggok 2-dong",
+    "lat": 37.557475,
+    "lon": 127.083544444444
+  },
+  {
+    "name": "Gwangjin-gu - Junggok 3-dong",
+    "lat": 37.5659166666666,
+    "lon": 127.082252777777
+  },
+  {
+    "name": "Gwangjin-gu - Junggok-je 4-dong",
+    "lat": 37.5625111111111,
+    "lon": 127.089352777777
+  },
+  {
+    "name": "Gwangjin-gu - Active",
+    "lat": 37.5510277777777,
+    "lon": 127.082644444444
+  },
+  {
+    "name": "Gwangjin-gu - Gwangjang-dong",
+    "lat": 37.5442138888888,
+    "lon": 127.105308333333
+  },
+  {
+    "name": "Gwangjin-gu - Jayang 1-dong",
+    "lat": 37.5316861111111,
+    "lon": 127.084419444444
+  },
+  {
+    "name": "Gwangjin-gu - Jayang 2nd District",
+    "lat": 37.5259999999999,
+    "lon": 127.086599999999
+  },
+  {
+    "name": "Gwangjin-gu - Jayang 3-dong",
+    "lat": 37.5310333333333,
+    "lon": 127.075030555555
+  },
+  {
+    "name": "Gwangjin-gu - Jayangje 4-dong",
+    "lat": 37.5374861111111,
+    "lon": 127.067252777777
+  },
+  {
+    "name": "Gwangjin-gu - Guui 1-dong",
+    "lat": 37.5396749999999,
+    "lon": 127.087866666666
+  },
+  {
+    "name": "Gwangjin-gu - Guui 2-dong",
+    "lat": 37.5444388888888,
+    "lon": 127.092108333333
+  },
+  {
+    "name": "Gwangjin-gu - Guui 3-dong",
+    "lat": 37.5361388888888,
+    "lon": 127.099688888888
+  },
+  {
+    "name": "Dongdaemun-gu",
+    "lat": 37.571625,
+    "lon": 127.042141666666
+  },
+  {
+    "name": "Dongdaemun-gu - Yongsin-dong",
+    "lat": 37.5758185,
+    "lon": 127.0372169
+  },
+  {
+    "name": "Dongdaemun-gu - Jegi-dong",
+    "lat": 37.5830767,
+    "lon": 127.0377843
+  },
+  {
+    "name": "Dongdaemun-gu - Jeon Nong Je 1-dong",
+    "lat": 37.5752111111111,
+    "lon": 127.049866666666
+  },
+  {
+    "name": "Dongdaemun-gu - Jeon Nong Je 2-dong",
+    "lat": 37.5817027777777,
+    "lon": 127.053863888888
+  },
+  {
+    "name": "Dongdaemun-gu - Dapsimni 1-dong",
+    "lat": 37.569275,
+    "lon": 127.054222222222
+  },
+  {
+    "name": "Dongdaemun-gu - Dapsimni 2-dong",
+    "lat": 37.5691527777777,
+    "lon": 127.061574999999
+  },
+  {
+    "name": "Dongdaemun-gu - Jang-an 1-dong",
+    "lat": 37.5649861111111,
+    "lon": 127.068477777777
+  },
+  {
+    "name": "Dongdaemun-gu - Jang-an 2-dong",
+    "lat": 37.5684083333333,
+    "lon": 127.075308333333
+  },
+  {
+    "name": "Dongdaemun-gu - Cheongnyangni-dong",
+    "lat": 37.5862586,
+    "lon": 127.0472767
+  },
+  {
+    "name": "Dongdaemun-gu - Hoegi-dong",
+    "lat": 37.5880083333333,
+    "lon": 127.057488888888
+  },
+  {
+    "name": "Dongdaemun-gu - Hwigyeongje 1-dong",
+    "lat": 37.5901583333333,
+    "lon": 127.067819444444
+  },
+  {
+    "name": "Dongdaemun-gu - Hwigyeongje 2-dong",
+    "lat": 37.5884944444444,
+    "lon": 127.069655555555
+  },
+  {
+    "name": "Dongdaemun-gu - This problem 1",
+    "lat": 37.595,
+    "lon": 127.067630555555
+  },
+  {
+    "name": "Dongdaemun-gu - This problem 2",
+    "lat": 37.5917305555555,
+    "lon": 127.058619444444
+  },
+  {
+    "name": "Jungnang-gu",
+    "lat": 37.6038055555555,
+    "lon": 127.094777777777
+  },
+  {
+    "name": "Jungnang-gu - Myeonmok 2-dong",
+    "lat": 37.5869833333333,
+    "lon": 127.081133333333
+  },
+  {
+    "name": "Jungnang-gu - Myeonmok-je 4-dong",
+    "lat": 37.5718166666666,
+    "lon": 127.087622222222
+  },
+  {
+    "name": "Jungnang-gu - Myeonmok 5-dong",
+    "lat": 37.5830472222222,
+    "lon": 127.081722222222
+  },
+  {
+    "name": "Jungnang-gu - Myeonmokbon-dong",
+    "lat": 37.5845611111111,
+    "lon": 127.089677777777
+  },
+  {
+    "name": "Jungnang-gu - Myeonmok-je 7-dong",
+    "lat": 37.5762,
+    "lon": 127.089086111111
+  },
+  {
+    "name": "Jungnang-gu - Myeonmokje 3.8-dong",
+    "lat": 37.5802361111111,
+    "lon": 127.090219444444
+  },
+  {
+    "name": "Jungnang-gu - Sangbong 1-dong",
+    "lat": 37.5970277777777,
+    "lon": 127.089288888888
+  },
+  {
+    "name": "Jungnang-gu - Sangbong 2-dong",
+    "lat": 37.5896111111111,
+    "lon": 127.085388888888
+  },
+  {
+    "name": "Jungnang-gu - Junghwa 1-dong",
+    "lat": 37.5983861111111,
+    "lon": 127.082777777777
+  },
+  {
+    "name": "Jungnang-gu - Junghwa 2nd building",
+    "lat": 37.5922166666666,
+    "lon": 127.077022222222
+  },
+  {
+    "name": "Jungnang-gu - Mukje 1-dong",
+    "lat": 37.6096222222222,
+    "lon": 127.080586111111
+  },
+  {
+    "name": "Jungnang-gu - Mukje 2-dong",
+    "lat": 37.6067972222222,
+    "lon": 127.078144444444
+  },
+  {
+    "name": "Jungnang-gu - Mangwoobon-dong",
+    "lat": 37.5986916666666,
+    "lon": 127.108463888888
+  },
+  {
+    "name": "Jungnang-gu - Mangwoo 3-dong",
+    "lat": 37.5895777777777,
+    "lon": 127.100266666666
+  },
+  {
+    "name": "Jungnang-gu - Shinnae 1-dong",
+    "lat": 37.6030833333333,
+    "lon": 127.101552777777
+  },
+  {
+    "name": "Jungnang-gu - Shinnae 2-dong",
+    "lat": 37.6034305555555,
+    "lon": 127.096274999999
+  },
+  {
+    "name": "Seongbuk-gu",
+    "lat": 37.5863833333333,
+    "lon": 127.020333333333
+  },
+  {
+    "name": "Seongbuk-gu - Seongbuk-dong",
+    "lat": 37.5874416666666,
+    "lon": 127.006086111111
+  },
+  {
+    "name": "Seongbuk-gu - Samseon-dong",
+    "lat": 37.5828472222222,
+    "lon": 127.009555555555
+  },
+  {
+    "name": "Seongbuk-gu - Dongseon-dong",
+    "lat": 37.5912777777777,
+    "lon": 127.022508333333
+  },
+  {
+    "name": "Seongbuk-gu - Donam 1-dong",
+    "lat": 37.6005083333333,
+    "lon": 127.028288888888
+  },
+  {
+    "name": "Seongbuk-gu - Donam 2nd dong",
+    "lat": 37.5952555555555,
+    "lon": 127.012711111111
+  },
+  {
+    "name": "Seongbuk-gu - Anam-dong",
+    "lat": 37.5830583333333,
+    "lon": 127.023477777777
+  },
+  {
+    "name": "Seongbuk-gu - Bomun-dong",
+    "lat": 37.5775888888888,
+    "lon": 127.0249
+  },
+  {
+    "name": "Seongbuk-gu - Jeongneung 1-dong",
+    "lat": 37.5986416666666,
+    "lon": 127.018741666666
+  },
+  {
+    "name": "Seongbuk-gu - Jeongneung 2-dong",
+    "lat": 37.6016666666666,
+    "lon": 127.013241666666
+  },
+  {
+    "name": "Seongbuk-gu - Jeongneung 3-dong",
+    "lat": 37.6061666666666,
+    "lon": 127.006288888888
+  },
+  {
+    "name": "Seongbuk-gu - Jeongneung 4-dong",
+    "lat": 37.6107861111111,
+    "lon": 127.008208333333
+  },
+  {
+    "name": "Seongbuk-gu - Gilumje 1-dong",
+    "lat": 37.6017833333333,
+    "lon": 127.024166666666
+  },
+  {
+    "name": "Seongbuk-gu - Gilumje 2-dong",
+    "lat": 37.60385,
+    "lon": 127.0294
+  },
+  {
+    "name": "Seongbuk-gu - Jongam-dong",
+    "lat": 37.5973305555555,
+    "lon": 127.033552777777
+  },
+  {
+    "name": "Seongbuk-gu - Wolgok 1-dong",
+    "lat": 37.6042027777777,
+    "lon": 127.036141666666
+  },
+  {
+    "name": "Seongbuk-gu - Wolgok 2-dong",
+    "lat": 37.5999416666666,
+    "lon": 127.041688888888
+  },
+  {
+    "name": "Seongbuk-gu - Jangwi 1-dong",
+    "lat": 37.6111916666666,
+    "lon": 127.045855555555
+  },
+  {
+    "name": "Seongbuk-gu - Jangwi 2-dong",
+    "lat": 37.6096638888888,
+    "lon": 127.056708333333
+  },
+  {
+    "name": "Seongbuk-gu - Jangwi 3-dong",
+    "lat": 37.6137722222222,
+    "lon": 127.058722222222
+  },
+  {
+    "name": "Seongbuk-gu - Seokgwan-dong",
+    "lat": 37.6101611111111,
+    "lon": 127.063519444444
+  },
+  {
+    "name": "Gangbuk-gu",
+    "lat": 37.6369555555555,
+    "lon": 127.027719444444
+  },
+  {
+    "name": "Gangbuk-gu - Samyang-dong",
+    "lat": 37.6244833333333,
+    "lon": 127.020511111111
+  },
+  {
+    "name": "Gangbuk-gu - Mia-dong",
+    "lat": 37.6241361111111,
+    "lon": 127.029019444444
+  },
+  {
+    "name": "Gangbuk-gu - Songjung-dong",
+    "lat": 37.6133611111111,
+    "lon": 127.035833333333
+  },
+  {
+    "name": "Gangbuk-gu - Songcheon-dong",
+    "lat": 37.6155166666666,
+    "lon": 127.025955555555
+  },
+  {
+    "name": "Gangbuk-gu - Samgaksan-dong",
+    "lat": 37.6144305555555,
+    "lon": 127.019852777777
+  },
+  {
+    "name": "Gangbuk-gu - Building 1",
+    "lat": 37.6351583333333,
+    "lon": 127.031019444444
+  },
+  {
+    "name": "Gangbuk-gu - Building 2",
+    "lat": 37.6293861111111,
+    "lon": 127.040944444444
+  },
+  {
+    "name": "Gangbuk-gu - Beon3dong",
+    "lat": 37.6230944444444,
+    "lon": 127.048688888888
+  },
+  {
+    "name": "Gangbuk-gu - Suyu 1-dong",
+    "lat": 37.6307333333333,
+    "lon": 127.019297222222
+  },
+  {
+    "name": "Gangbuk-gu - Suyu 2-dong",
+    "lat": 37.6418805555555,
+    "lon": 127.022041666666
+  },
+  {
+    "name": "Gangbuk-gu - Suyu 3-dong",
+    "lat": 37.6359722222222,
+    "lon": 127.025319444444
+  },
+  {
+    "name": "Gangbuk-gu - Ui-dong",
+    "lat": 37.6451944444444,
+    "lon": 127.014066666666
+  },
+  {
+    "name": "Gangbuk-gu - Insu-dong",
+    "lat": 37.6387333333333,
+    "lon": 127.012766666666
+  },
+  {
+    "name": "Dobong-gu",
+    "lat": 37.6658333333333,
+    "lon": 127.049522222222
+  },
+  {
+    "name": "Dobong-gu - Changje 1-dong",
+    "lat": 37.6456472222222,
+    "lon": 127.045997222222
+  },
+  {
+    "name": "Dobong-gu - Changje 2-dong",
+    "lat": 37.6387277777777,
+    "lon": 127.037766666666
+  },
+  {
+    "name": "Dobong-gu - Changje 3-dong",
+    "lat": 37.6352694444444,
+    "lon": 127.045008333333
+  },
+  {
+    "name": "Dobong-gu - Changje 4-dong",
+    "lat": 37.6493972222222,
+    "lon": 127.053666666666
+  },
+  {
+    "name": "Dobong-gu - Changje 5-dong",
+    "lat": 37.6492138888888,
+    "lon": 127.041297222222
+  },
+  {
+    "name": "Dobong-gu - Dobong 1-dong",
+    "lat": 37.6758194444444,
+    "lon": 127.045511111111
+  },
+  {
+    "name": "Dobong-gu - Dobong 2-dong",
+    "lat": 37.6669999999999,
+    "lon": 127.048708333333
+  },
+  {
+    "name": "Dobong-gu - Double problem 1",
+    "lat": 37.6452472222222,
+    "lon": 127.028177777777
+  },
+  {
+    "name": "Dobong-gu - Double problem 2",
+    "lat": 37.6550805555555,
+    "lon": 127.040911111111
+  },
+  {
+    "name": "Dobong-gu - Double problem 3",
+    "lat": 37.6461944444444,
+    "lon": 127.030088888888
+  },
+  {
+    "name": "Dobong-gu - Double problem 4",
+    "lat": 37.653625,
+    "lon": 127.030544444444
+  },
+  {
+    "name": "Dobong-gu - Vacation 1st building",
+    "lat": 37.6614333333333,
+    "lon": 127.042766666666
+  },
+  {
+    "name": "Dobong-gu - Vacation 2nd building",
+    "lat": 37.6654361111111,
+    "lon": 127.037222222222
+  },
+  {
+    "name": "Dobong-gu - Vacation 3rd building",
+    "lat": 37.6562277777777,
+    "lon": 127.030077777777
+  },
+  {
+    "name": "Nowon-gu",
+    "lat": 37.6514611111111,
+    "lon": 127.058388888888
+  },
+  {
+    "name": "Nowon-gu - Wolgye 1-dong",
+    "lat": 37.6173194444444,
+    "lon": 127.065088888888
+  },
+  {
+    "name": "Nowon-gu - Wolgye 2-dong",
+    "lat": 37.6297611111111,
+    "lon": 127.052997222222
+  },
+  {
+    "name": "Nowon-gu - Wolgye 3-dong",
+    "lat": 37.6182055555555,
+    "lon": 127.071330555555
+  },
+  {
+    "name": "Nowon-gu - Gongneung 1-dong",
+    "lat": 37.62472748,
+    "lon": 127.0737518
+  },
+  {
+    "name": "Nowon-gu - Gongneung 2-dong",
+    "lat": 37.6185694444444,
+    "lon": 127.085441666666
+  },
+  {
+    "name": "Nowon-gu - Summer 1-dong",
+    "lat": 37.6377833333333,
+    "lon": 127.074730555555
+  },
+  {
+    "name": "Nowon-gu - Summer 2nd building",
+    "lat": 37.62925,
+    "lon": 127.070111111111
+  },
+  {
+    "name": "Nowon-gu - Junggye-bon-dong",
+    "lat": 37.6450722222222,
+    "lon": 127.082455555555
+  },
+  {
+    "name": "Nowon-gu - Junggye 1-dong",
+    "lat": 37.6497861111111,
+    "lon": 127.079663888888
+  },
+  {
+    "name": "Nowon-gu - Junggye 4-dong",
+    "lat": 37.6559666666666,
+    "lon": 127.080088888888
+  },
+  {
+    "name": "Nowon-gu - Junggye 2.3-dong",
+    "lat": 37.6421829,
+    "lon": 127.0687126
+  },
+  {
+    "name": "Nowon-gu - Sanggye 1-dong",
+    "lat": 37.6771027777777,
+    "lon": 127.057211111111
+  },
+  {
+    "name": "Nowon-gu - Sanggye 2-dong",
+    "lat": 37.655975,
+    "lon": 127.070708333333
+  },
+  {
+    "name": "Nowon-gu - Sanggye 3.4-dong",
+    "lat": 37.661,
+    "lon": 127.077466666666
+  },
+  {
+    "name": "Nowon-gu - Sanggye 5-dong",
+    "lat": 37.6602194444444,
+    "lon": 127.071486111111
+  },
+  {
+    "name": "Nowon-gu - Sanggye 6.7-dong",
+    "lat": 37.6520888888888,
+    "lon": 127.069066666666
+  },
+  {
+    "name": "Nowon-gu - Sanggye 8-dong",
+    "lat": 37.6639444444444,
+    "lon": 127.053666666666
+  },
+  {
+    "name": "Nowon-gu - Sanggye 9-dong",
+    "lat": 37.6617111111111,
+    "lon": 127.065955555555
+  },
+  {
+    "name": "Nowon-gu - Sanggye 10-dong",
+    "lat": 37.6584333333333,
+    "lon": 127.062366666666
+  },
+  {
+    "name": "Eunpyeong-gu",
+    "lat": 37.5999694444444,
+    "lon": 126.931241666666
+  },
+  {
+    "name": "Eunpyeong-gu - Nokbeon-dong",
+    "lat": 37.5999611111111,
+    "lon": 126.936844444444
+  },
+  {
+    "name": "Eunpyeong-gu - Bulkwangje 1-dong",
+    "lat": 37.6075361111111,
+    "lon": 126.934188888888
+  },
+  {
+    "name": "Eunpyeong-gu - Bulkwang 2-dong",
+    "lat": 37.6187944444444,
+    "lon": 126.929819444444
+  },
+  {
+    "name": "Eunpyeong-gu - Galhyeon 1-dong",
+    "lat": 37.6208972222222,
+    "lon": 126.918788888888
+  },
+  {
+    "name": "Eunpyeong-gu - Galhyeon 2-dong",
+    "lat": 37.6157666666666,
+    "lon": 126.917888888888
+  },
+  {
+    "name": "Eunpyeong-gu - Gusan-dong",
+    "lat": 37.6090194444444,
+    "lon": 126.9125
+  },
+  {
+    "name": "Eunpyeong-gu - Daejodong",
+    "lat": 37.6113388888888,
+    "lon": 126.922888888888
+  },
+  {
+    "name": "Eunpyeong-gu - Eungam 1-dong",
+    "lat": 37.5979111111111,
+    "lon": 126.928863888888
+  },
+  {
+    "name": "Eunpyeong-gu - Eungam 2-dong",
+    "lat": 37.5918166666666,
+    "lon": 126.925130555555
+  },
+  {
+    "name": "Eunpyeong-gu - Eungam 3-dong",
+    "lat": 37.5893861111111,
+    "lon": 126.917841666666
+  },
+  {
+    "name": "Eunpyeong-gu - Yeokchon-dong",
+    "lat": 37.6016194444444,
+    "lon": 126.917277777777
+  },
+  {
+    "name": "Eunpyeong-gu - Shinsa 1-dong",
+    "lat": 37.5952194444444,
+    "lon": 126.914386111111
+  },
+  {
+    "name": "Eunpyeong-gu - Shinsa 2-dong",
+    "lat": 37.5893333333333,
+    "lon": 126.914833333333
+  },
+  {
+    "name": "Eunpyeong-gu - Jeungsan-dong",
+    "lat": 37.5815305555555,
+    "lon": 126.909222222222
+  },
+  {
+    "name": "Eunpyeong-gu - Suchaek-dong",
+    "lat": 37.5813583333333,
+    "lon": 126.899641666666
+  },
+  {
+    "name": "Eunpyeong-gu - Jinkwandong",
+    "lat": 37.6356,
+    "lon": 126.921111111111
+  },
+  {
+    "name": "Seodaemun-gu",
+    "lat": 37.5763666666666,
+    "lon": 126.938897222222
+  },
+  {
+    "name": "Seodaemun-gu - Natural Dong",
+    "lat": 37.5683027777777,
+    "lon": 126.961175
+  },
+  {
+    "name": "Seodaemun-gu - Buk Ahyeon-dong",
+    "lat": 37.5568694444444,
+    "lon": 126.958911111111
+  },
+  {
+    "name": "Seodaemun-gu - Chunghyeon-dong",
+    "lat": 37.5620611111111,
+    "lon": 126.956844444444
+  },
+  {
+    "name": "Seodaemun-gu - Shinchon-dong",
+    "lat": 37.5567388888888,
+    "lon": 126.945586111111
+  },
+  {
+    "name": "Seodaemun-gu - Yeonhui-dong",
+    "lat": 37.5711222222222,
+    "lon": 126.937352777777
+  },
+  {
+    "name": "Seodaemun-gu - Hongjeje 1-dong",
+    "lat": 37.5849,
+    "lon": 126.946986111111
+  },
+  {
+    "name": "Seodaemun-gu - Hongjeje 3-dong",
+    "lat": 37.5924444444444,
+    "lon": 126.951166666666
+  },
+  {
+    "name": "Seodaemun-gu - Hongjeje 2-dong",
+    "lat": 37.5833388888888,
+    "lon": 126.951466666666
+  },
+  {
+    "name": "Seodaemun-gu - Hong Eun 1-dong",
+    "lat": 37.5904305555555,
+    "lon": 126.945955555555
+  },
+  {
+    "name": "Seodaemun-gu - Hong Eun 2nd District",
+    "lat": 37.5801583333333,
+    "lon": 126.938486111111
+  },
+  {
+    "name": "Seodaemun-gu - Namgajwa 1-dong",
+    "lat": 37.5711944444444,
+    "lon": 126.915577777777
+  },
+  {
+    "name": "Seodaemun-gu - Namgajwa 2-dong",
+    "lat": 37.5756277777777,
+    "lon": 126.925911111111
+  },
+  {
+    "name": "Seodaemun-gu - Bukgajwa 1-dong",
+    "lat": 37.5767111111111,
+    "lon": 126.908977777777
+  },
+  {
+    "name": "Seodaemun-gu - Bukgajwa 2-dong",
+    "lat": 37.5786027777777,
+    "lon": 126.913219444444
+  },
+  {
+    "name": "Mapo-gu",
+    "lat": 37.5607055555555,
+    "lon": 126.910530555555
+  },
+  {
+    "name": "Mapo-gu - Ahyeon-dong",
+    "lat": 37.5443444444444,
+    "lon": 126.954222222222
+  },
+  {
+    "name": "Mapo-gu - Gongdeok-dong",
+    "lat": 37.5474416666666,
+    "lon": 126.962088888888
+  },
+  {
+    "name": "Mapo-gu - Dohwa-dong",
+    "lat": 37.5349,
+    "lon": 126.952130555555
+  },
+  {
+    "name": "Mapo-gu - Yonggang-dong",
+    "lat": 37.5392472222222,
+    "lon": 126.943733333333
+  },
+  {
+    "name": "Mapo-gu - Daeheung-dong",
+    "lat": 37.55305,
+    "lon": 126.944811111111
+  },
+  {
+    "name": "Mapo-gu - Yeomri-dong",
+    "lat": 37.5443861111111,
+    "lon": 126.947719444444
+  },
+  {
+    "name": "Mapo-gu - Shinsudong",
+    "lat": 37.5440666666666,
+    "lon": 126.936641666666
+  },
+  {
+    "name": "Mapo-gu - Seogang-dong",
+    "lat": 37.5444472222222,
+    "lon": 126.934155555555
+  },
+  {
+    "name": "Mapo-gu - Seogyo-dong",
+    "lat": 37.5496555555555,
+    "lon": 126.922975
+  },
+  {
+    "name": "Mapo-gu - Hapjeong-dong",
+    "lat": 37.5467222222222,
+    "lon": 126.907752777777
+  },
+  {
+    "name": "Mapo-gu - Mangwon 1-dong",
+    "lat": 37.5524333333333,
+    "lon": 126.907766666666
+  },
+  {
+    "name": "Mapo-gu - Mangwon 2-dong",
+    "lat": 37.5575638888888,
+    "lon": 126.904311111111
+  },
+  {
+    "name": "Mapo-gu - Yeonnam-dong",
+    "lat": 37.5616944444444,
+    "lon": 126.924066666666
+  },
+  {
+    "name": "Mapo-gu - Seongsan 1-dong",
+    "lat": 37.5605833333333,
+    "lon": 126.910022222222
+  },
+  {
+    "name": "Mapo-gu - Seongsan 2nd dong",
+    "lat": 37.5659305555555,
+    "lon": 126.911152777777
+  },
+  {
+    "name": "Mapo-gu - Sangam-dong",
+    "lat": 37.5755138888888,
+    "lon": 126.896811111111
+  },
+  {
+    "name": "Yangcheon-gu",
+    "lat": 37.5142305555555,
+    "lon": 126.868708333333
+  },
+  {
+    "name": "Yangcheon-gu - Neck 1-dong",
+    "lat": 37.5275388888888,
+    "lon": 126.873233333333
+  },
+  {
+    "name": "Yangcheon-gu - Neck 2-dong",
+    "lat": 37.5433527777777,
+    "lon": 126.873808333333
+  },
+  {
+    "name": "Yangcheon-gu - Mok 3-dong",
+    "lat": 37.5420972222222,
+    "lon": 126.866599999999
+  },
+  {
+    "name": "Yangcheon-gu - Neck 4-dong",
+    "lat": 37.5295333333333,
+    "lon": 126.870497222222
+  },
+  {
+    "name": "Yangcheon-gu - Mok 5-dong",
+    "lat": 37.5324166666666,
+    "lon": 126.880752777777
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 1-dong",
+    "lat": 37.5300055555555,
+    "lon": 126.833599999999
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 2-dong",
+    "lat": 37.5221722222222,
+    "lon": 126.846586111111
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 3-dong",
+    "lat": 37.5308472222222,
+    "lon": 126.831175
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 4-dong",
+    "lat": 37.5219055555555,
+    "lon": 126.842155555555
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 5-dong",
+    "lat": 37.5368888888888,
+    "lon": 126.829444444444
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 6-dong",
+    "lat": 37.5133027777777,
+    "lon": 126.845766666666
+  },
+  {
+    "name": "Yangcheon-gu - Shinwol 7-dong",
+    "lat": 37.5190916666666,
+    "lon": 126.836763888888
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 1-dong",
+    "lat": 37.5157305555555,
+    "lon": 126.856397222222
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 2-dong",
+    "lat": 37.5164083333333,
+    "lon": 126.872697222222
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 3-dong",
+    "lat": 37.5123361111111,
+    "lon": 126.856886111111
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 4-dong",
+    "lat": 37.5206361111111,
+    "lon": 126.8608
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 6-dong",
+    "lat": 37.5142472222222,
+    "lon": 126.866486111111
+  },
+  {
+    "name": "Yangcheon-gu - Shinjeong 7-dong",
+    "lat": 37.5116,
+    "lon": 126.861755555555
+  },
+  {
+    "name": "Gangseo-gu",
+    "lat": 37.5481555555555,
+    "lon": 126.851675
+  },
+  {
+    "name": "Gangseo-gu - Yeomchang-dong",
+    "lat": 37.5510444444444,
+    "lon": 126.873044444444
+  },
+  {
+    "name": "Gangseo-gu - Deungchon 1-dong",
+    "lat": 37.5530666666666,
+    "lon": 126.860997222222
+  },
+  {
+    "name": "Gangseo-gu - Deungchon 2-dong",
+    "lat": 37.5398527777777,
+    "lon": 126.864597222222
+  },
+  {
+    "name": "Gangseo-gu - Deungchon 3-dong",
+    "lat": 37.5560944444444,
+    "lon": 126.850008333333
+  },
+  {
+    "name": "Gangseo-gu - Hwagok 1-dong",
+    "lat": 37.5277444444444,
+    "lon": 126.843741666666
+  },
+  {
+    "name": "Gangseo-gu - Hwagok 2-dong",
+    "lat": 37.5287888888888,
+    "lon": 126.856744444444
+  },
+  {
+    "name": "Gangseo-gu - Hwagok 3-dong",
+    "lat": 37.5399416666666,
+    "lon": 126.840463888888
+  },
+  {
+    "name": "Gangseo-gu - Hwagok 4-dong",
+    "lat": 37.5301333333333,
+    "lon": 126.865233333333
+  },
+  {
+    "name": "Gangseo-gu - Hwagokbon-dong",
+    "lat": 37.5412444444444,
+    "lon": 126.849752777777
+  },
+  {
+    "name": "Gangseo-gu - Hwagok-dong 6",
+    "lat": 37.5489944444444,
+    "lon": 126.852244444444
+  },
+  {
+    "name": "Gangseo-gu - Hwagok-je 8-dong",
+    "lat": 37.5298916666666,
+    "lon": 126.850422222222
+  },
+  {
+    "name": "Gangseo-gu - Gayang 1-dong",
+    "lat": 37.5664777777777,
+    "lon": 126.842663888888
+  },
+  {
+    "name": "Gangseo-gu - Gayang 2-dong",
+    "lat": 37.5646055555555,
+    "lon": 126.853363888888
+  },
+  {
+    "name": "Gangseo-gu - Gayang 3-dong",
+    "lat": 37.5582749999999,
+    "lon": 126.862686111111
+  },
+  {
+    "name": "Gangseo-gu - Balsan 1-dong",
+    "lat": 37.5502694444444,
+    "lon": 126.835244444444
+  },
+  {
+    "name": "Gangseo-gu - Ujangsandong",
+    "lat": 37.5482468,
+    "lon": 126.8418849
+  },
+  {
+    "name": "Gangseo-gu - Airport-dong",
+    "lat": 37.5561055555555,
+    "lon": 126.812163888888
+  },
+  {
+    "name": "Gangseo-gu - Fire station 1",
+    "lat": 37.5687722222222,
+    "lon": 126.814311111111
+  },
+  {
+    "name": "Gangseo-gu - Fire station 2",
+    "lat": 37.5638749999999,
+    "lon": 126.808830555555
+  },
+  {
+    "name": "Gangseo-gu - Fire prevention building 3",
+    "lat": 37.5759416666666,
+    "lon": 126.816019444444
+  },
+  {
+    "name": "Guro-gu",
+    "lat": 37.49265,
+    "lon": 126.889597222222
+  },
+  {
+    "name": "Guro-gu - Sindorim-dong",
+    "lat": 37.5049777777777,
+    "lon": 126.882652777777
+  },
+  {
+    "name": "Guro-gu - Kuro 1-dong",
+    "lat": 37.4902027777777,
+    "lon": 126.877855555555
+  },
+  {
+    "name": "Guro-gu - Kuro 2-dong",
+    "lat": 37.4886027777777,
+    "lon": 126.885666666666
+  },
+  {
+    "name": "Guro-gu - Kuro 3-dong",
+    "lat": 37.4830555555555,
+    "lon": 126.895686111111
+  },
+  {
+    "name": "Guro-gu - Kuro 4-dong",
+    "lat": 37.4888305555555,
+    "lon": 126.891222222222
+  },
+  {
+    "name": "Guro-gu - Kuro 5-dong",
+    "lat": 37.4972777777777,
+    "lon": 126.891377777777
+  },
+  {
+    "name": "Guro-gu - Garibong-dong",
+    "lat": 37.4779805555555,
+    "lon": 126.891986111111
+  },
+  {
+    "name": "Guro-gu - Gocheok 1-dong",
+    "lat": 37.4976083333333,
+    "lon": 126.864799999999
+  },
+  {
+    "name": "Guro-gu - Gocheok 2-dong",
+    "lat": 37.5037777777777,
+    "lon": 126.860430555555
+  },
+  {
+    "name": "Guro-gu - Gaebongje 1-dong",
+    "lat": 37.4993861111111,
+    "lon": 126.849263888888
+  },
+  {
+    "name": "Guro-gu - Gaebong 2-dong",
+    "lat": 37.488025,
+    "lon": 126.858619444444
+  },
+  {
+    "name": "Guro-gu - Gaebong 3-dong",
+    "lat": 37.4831722222222,
+    "lon": 126.855888888888
+  },
+  {
+    "name": "Guro-gu - Error 1st floor",
+    "lat": 37.4942472222222,
+    "lon": 126.847088888888
+  },
+  {
+    "name": "Guro-gu - Error 2nd floor",
+    "lat": 37.4859916666666,
+    "lon": 126.841608333333
+  },
+  {
+    "name": "Guro-gu - Su-gung-dong",
+    "lat": 37.4911055555555,
+    "lon": 126.833566666666
+  },
+  {
+    "name": "Guro-gu - Anti-vibration",
+    "lat": 37.482174,
+    "lon": 126.8107155
+  },
+  {
+    "name": "Geumcheon-gu",
+    "lat": 37.4491083333333,
+    "lon": 126.904197222222
+  },
+  {
+    "name": "Geumcheon-gu - Gasan-dong",
+    "lat": 37.474125,
+    "lon": 126.893808333333
+  },
+  {
+    "name": "Geumcheon-gu - Doksan 1-dong",
+    "lat": 37.4674583333333,
+    "lon": 126.8991
+  },
+  {
+    "name": "Geumcheon-gu - Doksan 2nd dong",
+    "lat": 37.4632944444444,
+    "lon": 126.901844444444
+  },
+  {
+    "name": "Geumcheon-gu - Doksan 3-dong",
+    "lat": 37.4737888888888,
+    "lon": 126.909988888888
+  },
+  {
+    "name": "Geumcheon-gu - Doksan 4-dong",
+    "lat": 37.4646555555555,
+    "lon": 126.904222222222
+  },
+  {
+    "name": "Geumcheon-gu - Siheung 1-dong",
+    "lat": 37.4521472222222,
+    "lon": 126.899419444444
+  },
+  {
+    "name": "Geumcheon-gu - Siheung 2-dong",
+    "lat": 37.4472916666666,
+    "lon": 126.918830555555
+  },
+  {
+    "name": "Geumcheon-gu - Siheung 3-dong",
+    "lat": 37.4375194444444,
+    "lon": 126.907975
+  },
+  {
+    "name": "Geumcheon-gu - Siheung 4-dong",
+    "lat": 37.456175,
+    "lon": 126.908241666666
+  },
+  {
+    "name": "Geumcheon-gu - Siheung 5-dong",
+    "lat": 37.4495861111111,
+    "lon": 126.910408333333
+  },
+  {
+    "name": "Yeongdeungpo-gu",
+    "lat": 37.5236111111111,
+    "lon": 126.898341666666
+  },
+  {
+    "name": "Yeongdeungpo-gu - Yeongdeungpo-dong",
+    "lat": 37.5146826,
+    "lon": 126.9093046
+  },
+  {
+    "name": "Yeongdeungpo-gu - Yeongdeungpo-dong",
+    "lat": 37.5203985,
+    "lon": 126.910691
+  },
+  {
+    "name": "Yeongdeungpo-gu - Yeouido",
+    "lat": 37.5148888888888,
+    "lon": 126.936755555555
+  },
+  {
+    "name": "Yeongdeungpo-gu - Dangsan 1-dong",
+    "lat": 37.5221583333333,
+    "lon": 126.899522222222
+  },
+  {
+    "name": "Yeongdeungpo-gu - Dangsan 2-dong",
+    "lat": 37.5319388888888,
+    "lon": 126.904244444444
+  },
+  {
+    "name": "Yeongdeungpo-gu - Dorim-dong",
+    "lat": 37.509475,
+    "lon": 126.89595
+  },
+  {
+    "name": "Yeongdeungpo-gu - Munrae-dong",
+    "lat": 37.5170965,
+    "lon": 126.8995421
+  },
+  {
+    "name": "Yeongdeungpo-gu - Yangpyeong 1-dong",
+    "lat": 37.5208472222222,
+    "lon": 126.890286111111
+  },
+  {
+    "name": "Yeongdeungpo-gu - Yangpyeong 2nd district",
+    "lat": 37.535,
+    "lon": 126.898022222222
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 1-dong",
+    "lat": 37.5081722222222,
+    "lon": 126.923477777777
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 3-dong",
+    "lat": 37.5046222222222,
+    "lon": 126.909919444444
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 4-dong",
+    "lat": 37.5056722222222,
+    "lon": 126.913375
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 5-dong",
+    "lat": 37.4988222222222,
+    "lon": 126.907344444444
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 6-dong",
+    "lat": 37.4965638888888,
+    "lon": 126.911944444444
+  },
+  {
+    "name": "Yeongdeungpo-gu - Shingil 7-dong",
+    "lat": 37.5036555555555,
+    "lon": 126.923477777777
+  },
+  {
+    "name": "Yeongdeungpo-gu - Daerim 1-dong",
+    "lat": 37.4925888888888,
+    "lon": 126.907963888888
+  },
+  {
+    "name": "Yeongdeungpo-gu - Daerim 2nd dong",
+    "lat": 37.489925,
+    "lon": 126.900355555555
+  },
+  {
+    "name": "Yeongdeungpo-gu - Daerim 3-dong",
+    "lat": 37.4954861111111,
+    "lon": 126.900211111111
+  },
+  {
+    "name": "Dongjak-gu",
+    "lat": 37.5096555555555,
+    "lon": 126.941575
+  },
+  {
+    "name": "Dongjak-gu - Noryangjin 1-dong",
+    "lat": 37.5094805555555,
+    "lon": 126.944086111111
+  },
+  {
+    "name": "Dongjak-gu - Noryangjin 2nd district",
+    "lat": 37.5057333333333,
+    "lon": 126.939386111111
+  },
+  {
+    "name": "Dongjak-gu - Sangdo 1-dong",
+    "lat": 37.50405,
+    "lon": 126.953022222222
+  },
+  {
+    "name": "Dongjak-gu - Sangdo 2-dong",
+    "lat": 37.5026416666666,
+    "lon": 126.9444
+  },
+  {
+    "name": "Dongjak-gu - Sangdo 3-dong",
+    "lat": 37.4963666666666,
+    "lon": 126.933388888888
+  },
+  {
+    "name": "Dongjak-gu - Sangdo 4-dong",
+    "lat": 37.4977777777777,
+    "lon": 126.939875
+  },
+  {
+    "name": "Dongjak-gu - Heukseok-dong",
+    "lat": 37.5067388888888,
+    "lon": 126.962611111111
+  },
+  {
+    "name": "Dongjak-gu - Sadang 1-dong",
+    "lat": 37.4736111111111,
+    "lon": 126.975733333333
+  },
+  {
+    "name": "Dongjak-gu - Sadang 2-dong",
+    "lat": 37.4856194444444,
+    "lon": 126.979508333333
+  },
+  {
+    "name": "Dongjak-gu - Sadang 3-dong",
+    "lat": 37.483825,
+    "lon": 126.974086111111
+  },
+  {
+    "name": "Dongjak-gu - Sadang-dong 4",
+    "lat": 37.4781861111111,
+    "lon": 126.973722222222
+  },
+  {
+    "name": "Dongjak-gu - Sadang 5-dong",
+    "lat": 37.4827972222222,
+    "lon": 126.969108333333
+  },
+  {
+    "name": "Dongjak-gu - Daebang-dong",
+    "lat": 37.5053305555555,
+    "lon": 126.928444444444
+  },
+  {
+    "name": "Dongjak-gu - Shindaebang 1-dong",
+    "lat": 37.48615,
+    "lon": 126.912108333333
+  },
+  {
+    "name": "Dongjak-gu - Shindaebang 2-dong",
+    "lat": 37.4961222222222,
+    "lon": 126.927975
+  },
+  {
+    "name": "Gwanak-gu",
+    "lat": 37.4753861111111,
+    "lon": 126.953844444444
+  },
+  {
+    "name": "Gwanak-gu - Boramae-dong",
+    "lat": 37.4853055555555,
+    "lon": 126.934886111111
+  },
+  {
+    "name": "Gwanak-gu - Cheongnim-dong",
+    "lat": 37.4890388888888,
+    "lon": 126.960666666666
+  },
+  {
+    "name": "Gwanak-gu - Seonghyeon-dong",
+    "lat": 37.4896244,
+    "lon": 126.9481357
+  },
+  {
+    "name": "Gwanak-gu - Good luck",
+    "lat": 37.4778833333333,
+    "lon": 126.959033333333
+  },
+  {
+    "name": "Gwanak-gu - Naksungdaedong",
+    "lat": 37.4735,
+    "lon": 126.960488888888
+  },
+  {
+    "name": "Gwanak-gu - Cheongryong-dong",
+    "lat": 37.479151,
+    "lon": 126.94155
+  },
+  {
+    "name": "Gwanak-gu - Euncheon-dong",
+    "lat": 37.4853086,
+    "lon": 126.9424278
+  },
+  {
+    "name": "Gwanak-gu - Jungang-dong",
+    "lat": 37.4814416666666,
+    "lon": 126.951755555555
+  },
+  {
+    "name": "Gwanak-gu - Inheon-dong",
+    "lat": 37.4723055555555,
+    "lon": 126.967375
+  },
+  {
+    "name": "Gwanak-gu - Namhyeon-dong",
+    "lat": 37.4717888888888,
+    "lon": 126.979955555555
+  },
+  {
+    "name": "Gwanak-gu - Seowon-dong",
+    "lat": 37.4797346,
+    "lon": 126.9313
+  },
+  {
+    "name": "Gwanak-gu - Shinwon-dong",
+    "lat": 37.4787777777777,
+    "lon": 126.929419444444
+  },
+  {
+    "name": "Gwanak-gu - Seorim-dong",
+    "lat": 37.4721638888888,
+    "lon": 126.937055555555
+  },
+  {
+    "name": "Gwanak-gu - Shinsadong",
+    "lat": 37.4854118,
+    "lon": 126.9180796
+  },
+  {
+    "name": "Gwanak-gu - Shillim-dong",
+    "lat": 37.487426,
+    "lon": 126.927075
+  },
+  {
+    "name": "Gwanak-gu - Nanhyang-dong",
+    "lat": 37.461429,
+    "lon": 126.918842
+  },
+  {
+    "name": "Gwanak-gu - Jo Won-dong",
+    "lat": 37.4826299,
+    "lon": 126.9078649
+  },
+  {
+    "name": "Gwanak-gu - Daehak-dong",
+    "lat": 37.4706145,
+    "lon": 126.9369907
+  },
+  {
+    "name": "Gwanak-gu - Samseong-dong",
+    "lat": 37.470101,
+    "lon": 126.932963
+  },
+  {
+    "name": "Gwanak-gu - Misung-dong",
+    "lat": 37.4761761,
+    "lon": 126.9155534
+  },
+  {
+    "name": "Gwanak-gu - Nangok-dong",
+    "lat": 37.4709634,
+    "lon": 126.9216507
+  },
+  {
+    "name": "Seocho-gu",
+    "lat": 37.4807861111111,
+    "lon": 127.034811111111
+  },
+  {
+    "name": "Seocho-gu - Seocho 1-dong",
+    "lat": 37.486,
+    "lon": 127.021111111111
+  },
+  {
+    "name": "Seocho-gu - Seocho 2-dong",
+    "lat": 37.48925,
+    "lon": 127.026911111111
+  },
+  {
+    "name": "Seocho-gu - Seocho 3-dong",
+    "lat": 37.4807833333333,
+    "lon": 127.014566666666
+  },
+  {
+    "name": "Seocho-gu - Seocho 4-dong",
+    "lat": 37.4998555555555,
+    "lon": 127.024222222222
+  },
+  {
+    "name": "Seocho-gu - Jamwon-dong",
+    "lat": 37.5120888888888,
+    "lon": 127.016052777777
+  },
+  {
+    "name": "Seocho-gu - Banpo-bon-dong",
+    "lat": 37.49765,
+    "lon": 126.988133333333
+  },
+  {
+    "name": "Seocho-gu - Banpo 1-dong",
+    "lat": 37.5033194444444,
+    "lon": 127.014466666666
+  },
+  {
+    "name": "Seocho-gu - Banpo 2-dong",
+    "lat": 37.5017833333333,
+    "lon": 126.996575
+  },
+  {
+    "name": "Seocho-gu - Banpo 3-dong",
+    "lat": 37.5091722222222,
+    "lon": 127.007752777777
+  },
+  {
+    "name": "Seocho-gu - Banpo 4-dong",
+    "lat": 37.4947583333333,
+    "lon": 127.002441666666
+  },
+  {
+    "name": "Seocho-gu - Bangbae-bon-dong",
+    "lat": 37.4914444444444,
+    "lon": 126.990833333333
+  },
+  {
+    "name": "Seocho-gu - Bangbae 1-dong",
+    "lat": 37.4805583333333,
+    "lon": 126.996608333333
+  },
+  {
+    "name": "Seocho-gu - Bangbae 2-dong",
+    "lat": 37.4769666666666,
+    "lon": 126.987611111111
+  },
+  {
+    "name": "Seocho-gu - Bangbae 3-dong",
+    "lat": 37.4775388888888,
+    "lon": 127.001133333333
+  },
+  {
+    "name": "Seocho-gu - Bangbae 4-dong",
+    "lat": 37.4868166666666,
+    "lon": 126.993322222222
+  },
+  {
+    "name": "Seocho-gu - Yangjae 1-dong",
+    "lat": 37.4816361111111,
+    "lon": 127.038152777777
+  },
+  {
+    "name": "Seocho-gu - Yangjae 2-dong",
+    "lat": 37.4677805555555,
+    "lon": 127.043144444444
+  },
+  {
+    "name": "Seocho-gu - Naegok-dong",
+    "lat": 37.4591444444444,
+    "lon": 127.053411111111
+  },
+  {
+    "name": "Gangnam-gu",
+    "lat": 37.514575,
+    "lon": 127.049555555555
+  },
+  {
+    "name": "Gangnam-gu - Shinsadong",
+    "lat": 37.5213388888888,
+    "lon": 127.025022222222
+  },
+  {
+    "name": "Gangnam-gu - Nonhyeon 1-dong",
+    "lat": 37.5087888888888,
+    "lon": 127.030511111111
+  },
+  {
+    "name": "Gangnam-gu - Nonhyeon 2-dong",
+    "lat": 37.5144361111111,
+    "lon": 127.039288888888
+  },
+  {
+    "name": "Gangnam-gu - Apgujeong-dong",
+    "lat": 37.530642,
+    "lon": 127.030713
+  },
+  {
+    "name": "Gangnam-gu - Cheongdam-dong",
+    "lat": 37.5251083,
+    "lon": 127.0493
+  },
+  {
+    "name": "Gangnam-gu - Samseong 1-dong",
+    "lat": 37.5090416666666,
+    "lon": 127.057530555555
+  },
+  {
+    "name": "Gangnam-gu - Samseong 2-dong",
+    "lat": 37.5083888888888,
+    "lon": 127.048086111111
+  },
+  {
+    "name": "Gangnam-gu - Daechi 1-dong",
+    "lat": 37.4905055555555,
+    "lon": 127.063855555555
+  },
+  {
+    "name": "Gangnam-gu - Daechi 2-dong",
+    "lat": 37.4971111111111,
+    "lon": 127.069019444444
+  },
+  {
+    "name": "Gangnam-gu - Daechi 4-dong",
+    "lat": 37.4969638888888,
+    "lon": 127.059852777777
+  },
+  {
+    "name": "Gangnam-gu - Yeoksam 1-dong",
+    "lat": 37.4925833333333,
+    "lon": 127.035144444444
+  },
+  {
+    "name": "Gangnam-gu - Yeoksam 2-dong",
+    "lat": 37.4932472222222,
+    "lon": 127.048855555555
+  },
+  {
+    "name": "Gangnam-gu - Dogok 1-dong",
+    "lat": 37.4880666666666,
+    "lon": 127.040497222222
+  },
+  {
+    "name": "Gangnam-gu - Dogok 2-dong",
+    "lat": 37.4798638888888,
+    "lon": 127.0454
+  },
+  {
+    "name": "Gangnam-gu - Gaepo 1-dong",
+    "lat": 37.4790972222222,
+    "lon": 127.059555555555
+  },
+  {
+    "name": "Gangnam-gu - Gaepo 2-dong",
+    "lat": 37.485175,
+    "lon": 127.075741666666
+  },
+  {
+    "name": "Gangnam-gu - Gaepo 3-dong",
+    "lat": 37.4921439151835,
+    "lon": 127.073672992441
+  },
+  {
+    "name": "Gangnam-gu - Gaepo 4-dong",
+    "lat": 37.4760277777777,
+    "lon": 127.053733333333
+  },
+  {
+    "name": "Gangnam-gu - Segok-dong",
+    "lat": 37.4663666666666,
+    "lon": 127.109363888888
+  },
+  {
+    "name": "Gangnam-gu - Ilwonbon-dong",
+    "lat": 37.4805333333333,
+    "lon": 127.0886
+  },
+  {
+    "name": "Gangnam-gu - Ilwon 1-dong",
+    "lat": 37.4890583333333,
+    "lon": 127.090130555555
+  },
+  {
+    "name": "Gangnam-gu - Suseo-dong",
+    "lat": 37.4860277777777,
+    "lon": 127.107
+  },
+  {
+    "name": "Songpa-gu",
+    "lat": 37.5117555555555,
+    "lon": 127.107930555555
+  },
+  {
+    "name": "Songpa-gu - Pungnap 1-dong",
+    "lat": 37.5352472222222,
+    "lon": 127.124244444444
+  },
+  {
+    "name": "Songpa-gu - Pungnap 2-dong",
+    "lat": 37.52595,
+    "lon": 127.118863888888
+  },
+  {
+    "name": "Songpa-gu - Geoyeo 1-dong",
+    "lat": 37.4941083333333,
+    "lon": 127.145408333333
+  },
+  {
+    "name": "Songpa-gu - Geoyeo 2-dong",
+    "lat": 37.4906861111111,
+    "lon": 127.149
+  },
+  {
+    "name": "Songpa-gu - Macheon 1-dong",
+    "lat": 37.4932222222222,
+    "lon": 127.152088888888
+  },
+  {
+    "name": "Songpa-gu - Macheon 2-dong",
+    "lat": 37.494075,
+    "lon": 127.150677777777
+  },
+  {
+    "name": "Songpa-gu - Room 1",
+    "lat": 37.5081472222222,
+    "lon": 127.126011111111
+  },
+  {
+    "name": "Songpa-gu - Room 2",
+    "lat": 37.5117555555555,
+    "lon": 127.116533333333
+  },
+  {
+    "name": "Songpa-gu - Ollyun-dong",
+    "lat": 37.5125888888888,
+    "lon": 127.1365
+  },
+  {
+    "name": "Songpa-gu - Okgeum-dong",
+    "lat": 37.50015,
+    "lon": 127.130244444444
+  },
+  {
+    "name": "Songpa-gu - Songpa 1-dong",
+    "lat": 37.5031305555555,
+    "lon": 127.111819444444
+  },
+  {
+    "name": "Songpa-gu - Songpa 2-dong",
+    "lat": 37.4994361111111,
+    "lon": 127.118911111111
+  },
+  {
+    "name": "Songpa-gu - Seokchon-dong",
+    "lat": 37.500775,
+    "lon": 127.105752777777
+  },
+  {
+    "name": "Songpa-gu - Samjeon-dong",
+    "lat": 37.4999777777777,
+    "lon": 127.094641666666
+  },
+  {
+    "name": "Songpa-gu - Garakbon-dong",
+    "lat": 37.4927722222222,
+    "lon": 127.123911111111
+  },
+  {
+    "name": "Songpa-gu - Garak 1-dong",
+    "lat": 37.49375,
+    "lon": 127.107686111111
+  },
+  {
+    "name": "Songpa-gu - Garak 2-dong",
+    "lat": 37.4958444444444,
+    "lon": 127.128641666666
+  },
+  {
+    "name": "Songpa-gu - Munjeong 1-dong",
+    "lat": 37.4871916666666,
+    "lon": 127.1262
+  },
+  {
+    "name": "Songpa-gu - Munjeong 2-dong",
+    "lat": 37.4870527777777,
+    "lon": 127.113063888888
+  },
+  {
+    "name": "Songpa-gu - Jangji-dong",
+    "lat": 37.4841361111111,
+    "lon": 127.134533333333
+  },
+  {
+    "name": "Songpa-gu - Wiryedong",
+    "lat": 37.4791657,
+    "lon": 127.1414918
+  },
+  {
+    "name": "Songpa-gu - Jamsilbon-dong",
+    "lat": 37.5033555555555,
+    "lon": 127.086419444444
+  },
+  {
+    "name": "Songpa-gu - Jamsil 2-dong",
+    "lat": 37.5119138888888,
+    "lon": 127.089975
+  },
+  {
+    "name": "Songpa-gu - Jamsil 3-dong",
+    "lat": 37.5044888888888,
+    "lon": 127.096411111111
+  },
+  {
+    "name": "Songpa-gu - Jamsil 4-dong",
+    "lat": 37.5164444444444,
+    "lon": 127.110055555555
+  },
+  {
+    "name": "Songpa-gu - Jamsil 6-dong",
+    "lat": 37.5153833333333,
+    "lon": 127.102652777777
+  },
+  {
+    "name": "Songpa-gu - Jamsil 7-dong",
+    "lat": 37.5058611111111,
+    "lon": 127.079133333333
+  },
+  {
+    "name": "Gangdong-gu",
+    "lat": 37.5273666666666,
+    "lon": 127.125863888888
+  },
+  {
+    "name": "Gangdong-gu - Kang Il-dong",
+    "lat": 37.5667138888888,
+    "lon": 127.1804
+  },
+  {
+    "name": "Gangdong-gu - Sangil 1-dong",
+    "lat": 37.5506,
+    "lon": 127.1683
+  },
+  {
+    "name": "Gangdong-gu - Sangil 2nd dong",
+    "lat": 37.55,
+    "lon": 127.1759
+  },
+  {
+    "name": "Gangdong-gu - Myeongil 1-dong",
+    "lat": 37.5469638888888,
+    "lon": 127.148022222222
+  },
+  {
+    "name": "Gangdong-gu - Myeongil 2nd dong",
+    "lat": 37.5435527777777,
+    "lon": 127.153444444444
+  },
+  {
+    "name": "Gangdong-gu - Godeok 1-dong",
+    "lat": 37.5562444444444,
+    "lon": 127.151019444444
+  },
+  {
+    "name": "Gangdong-gu - Godeok 2nd dong",
+    "lat": 37.5577138888888,
+    "lon": 127.166486111111
+  },
+  {
+    "name": "Gangdong-gu - Amsaje 1-dong",
+    "lat": 37.5487166666666,
+    "lon": 127.134763888888
+  },
+  {
+    "name": "Gangdong-gu - Amsaje 2-dong",
+    "lat": 37.5489611111111,
+    "lon": 127.129352777777
+  },
+  {
+    "name": "Gangdong-gu - Amsaje 3-dong",
+    "lat": 37.5523722222222,
+    "lon": 127.140375
+  },
+  {
+    "name": "Gangdong-gu - Cheonho 1-dong",
+    "lat": 37.5423027777777,
+    "lon": 127.138877777777
+  },
+  {
+    "name": "Gangdong-gu - Cheonho 2nd dong",
+    "lat": 37.5397861111111,
+    "lon": 127.122908333333
+  },
+  {
+    "name": "Gangdong-gu - Cheonho 3-dong",
+    "lat": 37.5369722222222,
+    "lon": 127.131966666666
+  },
+  {
+    "name": "Gangdong-gu - Seongnae 1-dong",
+    "lat": 37.5278472222222,
+    "lon": 127.126030555555
+  },
+  {
+    "name": "Gangdong-gu - Seongnae 2-dong",
+    "lat": 37.5296027777777,
+    "lon": 127.131586111111
+  },
+  {
+    "name": "Gangdong-gu - Seongnae 3-dong",
+    "lat": 37.5233722222222,
+    "lon": 127.134886111111
+  },
+  {
+    "name": "Gangdong-gu - Gildong",
+    "lat": 37.5392169,
+    "lon": 127.1461684
+  },
+  {
+    "name": "Gangdong-gu - Dundun 1-dong",
+    "lat": 37.52075,
+    "lon": 127.138830555555
+  },
+  {
+    "name": "Gangdong-gu - Dundun 2-dong",
+    "lat": 37.53055,
+    "lon": 127.144019444444
+  }
+]

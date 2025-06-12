@@ -1,0 +1,2313 @@
+////////////////////////////////////////////................................App.py..................//////////////////////////////////////////////////////
+
+from flask import Flask, render_template, request
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta, timezone
+import sys
+import os
+import sqlite3
+import logging
+from logging.handlers import RotatingFileHandler
+from scipy.spatial import cKDTree
+
+# Add the pv_performance_tool directory to the system path
+sys.path.append(r"D:\Masters thesis PV\pv_performance_tool")
+from pv_models import pv_performance, calculate_iec_metrics, fetch_forecasted_data, fetch_historical_data, PV_MODULES
+
+app = Flask(__name__)
+
+# Configure logging
+if not app.debug:
+    handler = RotatingFileHandler('pv_performance.log', maxBytes=10000, backupCount=1)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    app.logger.addHandler(handler)
+
+# Database paths
+forecast_db_path = r"D:\Masters thesis PV\pv_performance_tool\data\forecast_data.db"
+weather_db_path = r"D:\Masters thesis PV\pv_performance_tool\data\weather_data.db"
+ghi_db_path = r"D:\Masters thesis PV\pv_performance_tool\data\ghi_data.db"
+locations_path = r"D:\Masters thesis PV\pv_performance_tool\data\locations_eng.xlsx"
+
+# KST timezone
+KST = timezone(timedelta(hours=9))
+
+# Define 20x20 grid for Seoul
+coords = [(lat, lon) for lat in np.linspace(37.4, 37.7, 20) for lon in np.linspace(126.8, 127.2, 20)]
+locations_df = pd.DataFrame(coords, columns=['lat', 'lon'])
+
+def round_to_grid(lat, lon):
+    """Round coordinates to the nearest grid point."""
+    app.logger.info(f"Input coordinates: ({lat}, {lon})")
+
+    # Since the database contains the exact coordinates, we only round to the nearest grid point if needed
+    coords = locations_df[['lat', 'lon']].values
+    tree = cKDTree(coords)
+    _, idx = tree.query([lat, lon])
+    rounded_lat, rounded_lon = locations_df.iloc[idx][['lat', 'lon']].values
+    app.logger.info(f"Rounded coordinates to grid point: ({rounded_lat}, {rounded_lon})")
+    return rounded_lat, rounded_lon
+
+def fetch_nearest_historical_data(lat, lon, target_time, ghi_db_path, weather_db_path, time_window_hours=1):
+    """Fetch the nearest historical data within a time window or from the nearest location."""
+    conn_ghi = sqlite3.connect(ghi_db_path)
+    conn_weather = sqlite3.connect(weather_db_path)
+
+    # Add tolerance for lat and lon comparisons
+    lat_lower = lat - 1e-6
+    lat_upper = lat + 1e-6
+    lon_lower = lon - 1e-6
+    lon_upper = lon + 1e-6
+
+    # Try fetching data within ±time_window_hours for the exact location with tolerance
+    start_time = target_time - timedelta(hours=time_window_hours)
+    end_time = target_time + timedelta(hours=time_window_hours)
+    query_ghi = """
+        SELECT timestamp, GHI
+        FROM ghi_data
+        WHERE lat BETWEEN ? AND ? 
+          AND lon BETWEEN ? AND ?
+          AND timestamp BETWEEN ? AND ?
+        ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?))
+        LIMIT 1
+    """
+    query_weather = """
+        SELECT timestamp, temperature, wind_speed
+        FROM weather_data
+        WHERE lat BETWEEN ? AND ? 
+          AND lon BETWEEN ? AND ?
+          AND timestamp BETWEEN ? AND ?
+          AND data_type = 'historical'
+        ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?))
+        LIMIT 1
+    """
+    try:
+        ghi_df = pd.read_sql_query(
+            query_ghi,
+            conn_ghi,
+            params=(lat_lower, lat_upper, lon_lower, lon_upper, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), target_time.strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        weather_df = pd.read_sql_query(
+            query_weather,
+            conn_weather,
+            params=(lat_lower, lat_upper, lon_lower, lon_upper, start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"), target_time.strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        if not ghi_df.empty and not weather_df.empty:
+            merged_df = pd.merge(ghi_df, weather_df, on='timestamp', how='inner')
+            if not merged_df.empty:
+                conn_ghi.close()
+                conn_weather.close()
+                return (np.array([pd.to_datetime(merged_df['timestamp'].iloc[0])]),
+                        np.array([merged_df['GHI'].iloc[0]]),
+                        np.array([merged_df['temperature'].iloc[0]]),
+                        np.array([merged_df['wind_speed'].iloc[0]]))
+
+        # If no data at exact coordinates, search for nearest location
+        app.logger.warning(f"No historical data found at exact coordinates ({lat}, {lon}). Searching for nearest location.")
+        start_time = target_time - timedelta(hours=24)
+        end_time = target_time
+        query_ghi = """
+            SELECT timestamp, lat, lon, GHI
+            FROM ghi_data
+            WHERE timestamp BETWEEN ? AND ?
+            ORDER BY timestamp DESC
+        """
+        query_weather = """
+            SELECT timestamp, lat, lon, temperature, wind_speed
+            FROM weather_data
+            WHERE timestamp BETWEEN ? AND ?
+            AND data_type = 'historical'
+            ORDER BY timestamp DESC
+        """
+        ghi_df = pd.read_sql_query(
+            query_ghi,
+            conn_ghi,
+            params=(start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        weather_df = pd.read_sql_query(
+            query_weather,
+            conn_weather,
+            params=(start_time.strftime("%Y-%m-%d %H:%M:%S"), end_time.strftime("%Y-%m-%d %H:%M:%S"))
+        )
+        app.logger.info(f"Available GHI locations: {ghi_df[['lat', 'lon']].drop_duplicates().to_dict('records')}")
+        app.logger.info(f"Available weather locations: {weather_df[['lat', 'lon']].drop_duplicates().to_dict('records')}")
+        if not ghi_df.empty and not weather_df.empty:
+            # Find the nearest location
+            available_coords = ghi_df[['lat', 'lon']].drop_duplicates().values
+            tree = cKDTree(available_coords)
+            _, idx = tree.query([lat, lon])
+            nearest_lat, nearest_lon = available_coords[idx]
+            app.logger.info(f"Nearest location found: ({nearest_lat}, {nearest_lon})")
+            ghi_df = ghi_df[(ghi_df['lat'] == nearest_lat) & (ghi_df['lon'] == nearest_lon)]
+            weather_df = weather_df[(weather_df['lat'] == nearest_lat) & (weather_df['lon'] == nearest_lon)]
+            merged_df = pd.merge(ghi_df, weather_df, on=['timestamp', 'lat', 'lon'], how='inner')
+            if not merged_df.empty:
+                conn_ghi.close()
+                conn_weather.close()
+                return (np.array([pd.to_datetime(merged_df['timestamp'].iloc[0])]),
+                        np.array([merged_df['GHI'].iloc[0]]),
+                        np.array([merged_df['temperature'].iloc[0]]),
+                        np.array([merged_df['wind_speed'].iloc[0]]))
+    except Exception as e:
+        app.logger.error(f"Error fetching nearest historical data: {str(e)}")
+
+    conn_ghi.close()
+    conn_weather.close()
+    return None, None, None, None
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    # Load locations from Excel file
+    try:
+        locations_df_excel = pd.read_excel(locations_path)
+        cols = locations_df_excel.columns.str.lower().str.strip()
+        app.logger.info(f"Columns in locations_eng.xlsx: {list(cols)}")
+        lat_col = next(col for col in cols if 'lat' in col or 'y' in col)
+        lon_col = next(col for col in cols if 'lon' in col or 'x' in col)
+        step2_col = next(col for col in cols if 'step 2' in col)
+        step3_col = next(col for col in cols if 'step 3' in col)
+        locations_df_excel = locations_df_excel.rename(columns={
+            locations_df_excel.columns[cols.tolist().index(lat_col)]: 'lat',
+            locations_df_excel.columns[cols.tolist().index(lon_col)]: 'lon'
+        })
+        location_options = [(row['lat'], row['lon']) for _, row in locations_df_excel.iterrows()]
+        location_options_with_labels = [
+            (
+                row['lat'],
+                row['lon'],
+                f"{row[locations_df_excel.columns[cols.tolist().index(step2_col)]]}{' - ' + row[locations_df_excel.columns[cols.tolist().index(step3_col)]] if pd.notna(row[locations_df_excel.columns[cols.tolist().index(step3_col)]]) else ''} (Lat: {row['lat']}, Lon: {row['lon']})"
+            )
+            for _, row in locations_df_excel.iterrows()
+        ]
+        if not location_options:
+            app.logger.error("No locations found in locations_eng.xlsx.")
+            return render_template('index.html', error="No locations available. Please check locations_eng.xlsx.",
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+        app.logger.info(f"Loaded {len(location_options)} locations from locations_eng.xlsx.")
+    except Exception as e:
+        app.logger.error(f"Error loading locations_eng.xlsx: {str(e)}")
+        location_options = []
+        location_options_with_labels = []
+        return render_template('index.html', error=f"Error loading locations_eng.xlsx: {str(e)}.",
+                               pv_types=list(PV_MODULES.keys()),
+                               model_types=["simple", "sapm", "single_diode", "cec"],
+                               orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+    current_results = None
+    forecast_results = None
+    current_timestamp = ""
+    current_ghi = 0
+    current_gti = 0
+    current_pac = 0
+    current_I = 0
+    current_V = 0
+    timestamps_list = []
+    ghi_list = []
+    gti_list = []
+    pac_list = []
+    I_list = []
+    V_list = []
+    iec_metrics = {}
+    forecast_message = ""
+
+    if request.method == 'POST':
+        app.logger.info("Received POST request to calculate PV performance.")
+        lat_source = request.form.get('lat_source', 'map')
+        if lat_source == 'manual':
+            try:
+                lat = float(request.form['manual_lat'])
+                lon = float(request.form['manual_lon'])
+                if not (37.4 <= lat <= 37.7 and 126.8 <= lon <= 127.2):
+                    app.logger.warning(f"Invalid coordinates: Lat={lat}, Lon={lon}. Out of Seoul bounds.")
+                    return render_template('index.html', error="Coordinates out of Seoul bounds (Lat: 37.4-37.7, Lon: 126.8-127.2).",
+                                           location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                           pv_types=list(PV_MODULES.keys()),
+                                           model_types=["simple", "sapm", "single_diode", "cec"],
+                                           orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+                lat, lon = round_to_grid(lat, lon)
+            except ValueError:
+                app.logger.error("Invalid latitude or longitude values in manual input.")
+                return render_template('index.html', error="Invalid latitude or longitude values. Please enter valid numbers.",
+                                       location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                       pv_types=list(PV_MODULES.keys()),
+                                       model_types=["simple", "sapm", "single_diode", "cec"],
+                                       orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+        else:
+            try:
+                lat = float(request.form['latitude'])
+                lon = float(request.form['longitude'])
+                if not (37.4 <= lat <= 37.7 and 126.8 <= lon <= 127.2):
+                    app.logger.warning(f"Invalid map-selected coordinates: Lat={lat}, Lon={lon}. Out of Seoul bounds.")
+                    return render_template('index.html', error="Selected location is outside Seoul bounds (Lat: 34-40, Lon: 126-132).",
+                                           location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                           pv_types=list(PV_MODULES.keys()),
+                                           model_types=["simple", "sapm", "single_diode", "cec"],
+                                           orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+                lat, lon = round_to_grid(lat, lon)
+            except ValueError:
+                app.logger.error("Invalid latitude or longitude values from map selection.")
+                return render_template('index.html', error="Please select a valid location from the map or search.",
+                                       location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                       pv_types=list(PV_MODULES.keys()),
+                                       model_types=["simple", "sapm", "single_diode", "cec"],
+                                       orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        pv_type = request.form['pv_type']
+        if pv_type not in PV_MODULES:
+            app.logger.error(f"Invalid PV type: {pv_type}")
+            return render_template('index.html', error="Invalid PV type selected.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        try:
+            area = float(request.form['area'])
+            if area <= 0:
+                raise ValueError
+        except ValueError:
+            app.logger.error("Invalid PV area value.")
+            return render_template('index.html', error="PV area must be a positive number.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        try:
+            tilt = float(request.form['tilt'])
+            if tilt < 0 or tilt > 90:
+                raise ValueError
+        except ValueError:
+            app.logger.error("Invalid tilt value.")
+            return render_template('index.html', error="Tilt must be between 0 and 90 degrees.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        orientation_source = request.form.get('orientation_source', 'dropdown')
+        if orientation_source == 'manual':
+            try:
+                orientation = float(request.form['manual_orientation'])
+                orientation = orientation % 360
+            except ValueError:
+                app.logger.error("Invalid manual orientation value.")
+                return render_template('index.html', error="Orientation must be a valid number.",
+                                       location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                       pv_types=list(PV_MODULES.keys()),
+                                       model_types=["simple", "sapm", "single_diode", "cec"],
+                                       orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+        else:
+            try:
+                orientation = float(request.form['orientation'])
+                valid_orientations = [0, -90, 90, 180]
+                if orientation not in valid_orientations:
+                    app.logger.warning(f"Invalid dropdown orientation: {orientation}")
+                    return render_template('index.html', error="Invalid orientation selected.",
+                                           location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                           pv_types=list(PV_MODULES.keys()),
+                                           model_types=["simple", "sapm", "single_diode", "cec"],
+                                           orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+            except ValueError:
+                app.logger.error("Invalid orientation value from dropdown.")
+                return render_template('index.html', error="Please select a valid orientation from the dropdown.",
+                                       location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                       pv_types=list(PV_MODULES.keys()),
+                                       model_types=["simple", "sapm", "single_diode", "cec"],
+                                       orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        model_type = request.form['model_type']
+        valid_models = ["simple", "sapm", "single_diode", "cec"]
+        if model_type not in valid_models:
+            app.logger.error(f"Invalid SAM model type: {model_type}")
+            return render_template('index.html', error="Invalid SAM model selected.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        # Fetch the most recent historical data available
+        now = datetime.now(KST).replace(second=0, microsecond=0)
+        current_time = now  # Use actual current time for comparison
+        historical_start_fetch = current_time - timedelta(hours=24)
+        historical_end_fetch = current_time
+
+        app.logger.info(f"Fetching historical data for lat={lat}, lon={lon}, from {historical_start_fetch} to {historical_end_fetch}, current time is {current_time}.")
+        try:
+            hist_timestamps, hist_ghi, hist_temp, hist_wind = fetch_historical_data(
+                lat, lon, historical_start_fetch, historical_end_fetch, ghi_db_path, weather_db_path, current_time
+            )
+        except Exception as e:
+            app.logger.error(f"Failed to fetch historical data: {str(e)}")
+            hist_timestamps, hist_ghi, hist_temp, hist_wind = None, None, None, None
+
+        if hist_timestamps is None or len(hist_timestamps) == 0:
+            app.logger.warning("No historical data available for the selected location within the last 24 hours. Attempting to fetch nearest data.")
+            hist_timestamps, hist_ghi, hist_temp, hist_wind = fetch_nearest_historical_data(
+                lat, lon, current_time, ghi_db_path, weather_db_path, time_window_hours=1
+            )
+            if hist_timestamps is None or len(hist_timestamps) == 0:
+                app.logger.error("No historical data available even after attempting to fetch nearest data.")
+                return render_template('index.html', error="No historical data available for the selected location within the last 24 hours. Please try a different location or ensure historical data is populated.",
+                                       location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                       pv_types=list(PV_MODULES.keys()),
+                                       model_types=["simple", "sapm", "single_diode", "cec"],
+                                       orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        # Use the most recent timestamp for "current" data
+        latest_idx = np.argmax(hist_timestamps)
+        current_timestamp = pd.Timestamp(hist_timestamps[latest_idx], tz=KST)
+        current_ghi = hist_ghi[latest_idx]
+        current_temp = hist_temp[latest_idx]
+        current_wind = hist_wind[latest_idx]
+
+        # Calculate current PV performance
+        app.logger.info(f"Using current timestamp {current_timestamp} for PV performance calculation.")
+        try:
+            current_gti, current_pdc, current_pac, current_I, current_V = pv_performance(
+                np.array([current_ghi]), np.array([current_timestamp]), lat, lon, pv_type, area, tilt, orientation,
+                np.array([current_temp]), np.array([current_wind]), model_type
+            )
+        except Exception as e:
+            app.logger.error(f"Error calculating current PV performance: {str(e)}")
+            return render_template('index.html', error=f"Error calculating current PV performance: {str(e)}.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        # Fetch forecasted data based on the latest forecast cycle
+        app.logger.info(f"Fetching forecasted data for lat={lat}, lon={lon}, current time is {current_time}.")
+        try:
+            timestamps, ghi, temperature, wind_speed, ghi_actual, ghi_forecast = fetch_forecasted_data(
+                lat, lon, None, None, forecast_db_path, weather_db_path, current_time
+            )
+        except Exception as e:
+            app.logger.error(f"Error fetching forecasted data: {str(e)}")
+            error_msg = str(e)
+            if "cannot reindex on an axis with duplicate labels" in error_msg:
+                error_msg = "Duplicate forecast data entries detected in the database. Please ensure the forecast scripts (e.g., forecasted_temp.py) are running correctly and not inserting duplicate timestamps for the same location."
+            return render_template('index.html', error=f"Error fetching forecasted data: {error_msg}. Please ensure the forecast scripts are running and check the database for duplicate entries.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        if timestamps is None or len(timestamps) == 0:
+            app.logger.error("No forecast data available for the selected location and time range.")
+            return render_template('index.html', error="No forecast data available for the selected location and time range. Please ensure the forecast scripts (e.g., forecasted_temp.py, lnn_forecast.py) are running and have populated the database.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+        else:
+            actual_start = pd.Timestamp(timestamps[0])
+            actual_end = pd.Timestamp(timestamps[-1])
+            # Convert numpy.timedelta64 to seconds and then to hours
+            delta = actual_end - actual_start
+            forecast_period_seconds = delta / np.timedelta64(1, 's')
+            forecast_period_hours = forecast_period_seconds / 3600.0
+            if forecast_period_hours < 3:
+                forecast_message = f"Forecast data available only from {actual_start.strftime('%Y-%m-%d %H:%M:%S')} to {actual_end.strftime('%Y-%m-%d %H:%M:%S')} ({forecast_period_hours:.1f} hours)."
+            else:
+                forecast_message = f"Forecast data available from {actual_start.strftime('%Y-%m-%d %H:%M:%S')} to {actual_end.strftime('%Y-%m-%d %H:%M:%S')} (3 hours)."
+
+        # Calculate forecasted PV performance
+        app.logger.info("Calculating forecasted PV performance with available data.")
+        try:
+            gti, pdc, pac, I, V = pv_performance(
+                ghi, timestamps, lat, lon, pv_type, area, tilt, orientation, temperature, wind_speed, model_type
+            )
+        except Exception as e:
+            app.logger.error(f"Error calculating forecasted PV performance: {str(e)}")
+            return render_template('index.html', error=f"Error calculating forecasted PV performance: {str(e)}.",
+                                   location_options=location_options, location_options_with_labels=location_options_with_labels,
+                                   pv_types=list(PV_MODULES.keys()),
+                                   model_types=["simple", "sapm", "single_diode", "cec"],
+                                   orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+        # Calculate IEC metrics
+        app.logger.info("Calculating IEC metrics.")
+        # Convert numpy.timedelta64 to seconds and then to hours
+        delta = timestamps[-1] - timestamps[0]
+        actual_forecast_seconds = delta / np.timedelta64(1, 's')
+        actual_forecast_hours = max(actual_forecast_seconds / 3600.0, 0.5)
+        iec_metrics = calculate_iec_metrics(
+            pdc_actual=current_pdc, pac_actual=current_pac,
+            pdc_forecasted=pdc, pac_forecasted=pac,
+            ghi_actual=np.array([current_ghi]), ghi_forecasted=ghi,
+            area=area, pmp_ref=PV_MODULES[pv_type]["Pmp_ref"],
+            hours=actual_forecast_hours
+        )
+
+        # Prepare current data for plotting with default values for None
+        current_timestamp_str = current_timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        current_ghi = float(current_ghi if current_ghi is not None else 0.0)
+        current_gti = float(current_gti[0] if current_gti[0] is not None else 0.0)
+        current_pdc = float(current_pdc[0] if current_pdc[0] is not None else 0.0)
+        current_pac = float(current_pac[0] if current_pac[0] is not None else 0.0)
+        current_I = float(current_I[0] if current_I[0] is not None else 0.0)
+        current_V = float(current_V[0] if current_V[0] is not None else 0.0)
+        current_temp = float(current_temp if current_temp is not None else 25.0)
+        current_wind = float(current_wind if current_wind is not None else 1.0)
+
+        current_results = {
+            'timestamp': current_timestamp_str,
+            'ghi': round(current_ghi, 2),
+            'gti': round(current_gti, 2),
+            'pdc': round(current_pdc, 2),
+            'pac': round(current_pac, 2),
+            'I': round(current_I, 2),
+            'V': round(current_V, 2),
+            'temperature': round(current_temp, 2),
+            'wind_speed': round(current_wind, 2)
+        }
+
+        # Prepare forecasted data for display and plotting with default values for None
+        forecast_results = []
+        timestamps_list = []
+        ghi_list = []
+        gti_list = []
+        pac_list = []
+        I_list = []
+        V_list = []
+        for i in range(len(timestamps)):
+            timestamp = pd.Timestamp(timestamps[i])
+            # Ensure the timestamp is in KST and formatted correctly
+            timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            timestamps_list.append(timestamp_str)
+            ghi_val = float(ghi[i] if ghi[i] is not None else 0.0)
+            gti_val = float(gti[i] if gti[i] is not None else 0.0)
+            pdc_val = float(pdc[i] if pdc[i] is not None else 0.0)
+            pac_val = float(pac[i] if pac[i] is not None else 0.0)
+            I_val = float(I[i] if I[i] is not None else 0.0)
+            V_val = float(V[i] if V[i] is not None else 0.0)
+            temp_val = float(temperature[i] if temperature[i] is not None else 25.0)
+            wind_val = float(wind_speed[i] if wind_speed[i] is not None else 1.0)
+            ghi_list.append(round(ghi_val, 2))
+            gti_list.append(round(gti_val, 2))
+            pac_list.append(round(pac_val, 2))
+            I_list.append(round(I_val, 2))
+            V_list.append(round(V_val, 2))
+            forecast_results.append({
+                'timestamp': timestamp_str,
+                'ghi': round(ghi_val, 2),
+                'gti': round(gti_val, 2),
+                'pdc': round(pdc_val, 2),
+                'pac': round(pac_val, 2),
+                'I': round(I_val, 2),
+                'V': round(V_val, 2),
+                'temperature': round(temp_val, 2),
+                'wind_speed': round(wind_val, 2)
+            })
+
+        # Log the timestamps and data lengths to verify
+        app.logger.info(f"Forecast timestamps: {timestamps_list}")
+        app.logger.info(f"Length of timestamps_list: {len(timestamps_list)}")
+        app.logger.info(f"Length of ghi_list: {len(ghi_list)}")
+        app.logger.info(f"Length of gti_list: {len(gti_list)}")
+        app.logger.info(f"Length of pac_list: {len(pac_list)}")
+        app.logger.info(f"Length of I_list: {len(I_list)}")
+        app.logger.info(f"Length of V_list: {len(V_list)}")
+
+        app.logger.info("Rendering template with current and forecasted results.")
+        return render_template('index.html',
+                               current_results=current_results,
+                               forecast_results=forecast_results,
+                               current_timestamp=current_timestamp_str,
+                               current_ghi=current_ghi,
+                               current_gti=current_gti,
+                               current_pac=current_pac,
+                               current_I=current_I,
+                               current_V=current_V,
+                               timestamps=timestamps_list,
+                               ghi=ghi_list,
+                               gti=gti_list,
+                               pac=pac_list,
+                               I=I_list,
+                               V=V_list,
+                               iec_metrics={k: round(v, 3) for k, v in iec_metrics.items()},
+                               pv_types=list(PV_MODULES.keys()),
+                               model_types=["simple", "sapm", "single_diode", "cec"],
+                               location_options=location_options,
+                               location_options_with_labels=location_options_with_labels,
+                               orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")],
+                               selected_lat=lat,
+                               selected_lon=lon,
+                               selected_pv_type=pv_type,
+                               selected_area=area,
+                               selected_tilt=tilt,
+                               selected_orientation=orientation,
+                               selected_model_type=model_type,
+                               forecast_message=forecast_message)
+
+    app.logger.info("Rendering initial template for GET request.")
+    return render_template('index.html',
+                           pv_types=list(PV_MODULES.keys()),
+                           model_types=["simple", "sapm", "single_diode", "cec"],
+                           location_options=location_options,
+                           location_options_with_labels=location_options_with_labels,
+                           orientation_options=[(0, "South (0°)"), (-90, "East (-90°)"), (90, "West (90°)"), (180, "North (180°)")])
+
+if __name__ == '__main__':
+    app.run(debug=True)
+	
+////////////////////////////////////////////................................End of app.py..................//////////////////////////////////////////////////////
+
+
+
+
+////////////////////////////////////////////................................pv_models.py..................//////////////////////////////////////////////////////
+
+import numpy as np
+import pandas as pd
+import sqlite3
+from datetime import datetime, timedelta
+from scipy.constants import k, e
+from datetime import timezone
+
+# KST timezone
+KST = timezone(timedelta(hours=9))
+
+# Constants
+G_STC = 1000  # STC irradiance (W/m^2)
+T_STC = 25  # STC temperature (°C)
+AM_STC = 1.5  # STC air mass
+q = e  # Electron charge (C)
+k_b = k  # Boltzmann constant (J/K)
+ALBEDO = 0.2  # Ground reflectance for Seoul (urban area)
+MAX_ZENITH_ANGLE = 85.0  # Maximum zenith angle for calculations (degrees)
+GHI_MIN = 0.0  # Minimum GHI (W/m^2)
+GHI_MAX = 2000.0  # Maximum GHI (W/m^2)
+
+# Perez model coefficients for F1 and F2 (from Perez et al., 1990, as used in PVLib)
+PEREZ_COEFFS = [
+    {"f11": -0.008, "f12": 0.588, "f13": -0.062, "f21": -0.060, "f22": 0.072, "f23": -0.022},
+    {"f11": 0.130, "f12": 0.683, "f13": -0.151, "f21": -0.019, "f22": 0.066, "f23": -0.029},
+    {"f11": 0.330, "f12": 0.487, "f13": -0.221, "f21": 0.055, "f22": -0.064, "f23": -0.026},
+    {"f11": 0.568, "f12": 0.187, "f13": -0.295, "f21": 0.109, "f22": -0.152, "f23": -0.014},
+    {"f11": 0.873, "f12": -0.392, "f13": -0.362, "f21": 0.226, "f22": -0.462, "f23": 0.001},
+    {"f11": 1.132, "f12": -1.237, "f13": -0.412, "f21": 0.288, "f22": -0.823, "f23": 0.056},
+    {"f11": 1.060, "f12": -1.599, "f13": -0.359, "f21": 0.264, "f22": -1.127, "f23": 0.131},
+    {"f11": 0.678, "f12": -0.327, "f13": -0.250, "f21": 0.156, "f22": -1.377, "f23": 0.251}
+]
+
+# Real PV module parameters (based on typical datasheets)
+PV_MODULES = {
+    "Monocrystalline": {
+        "name": "SunPower SPR-X21-335",
+        "Isc_ref": 6.14,
+        "Voc_ref": 67.9,
+        "Imp_ref": 5.89,
+        "Vmp_ref": 56.9,
+        "Pmp_ref": 335,
+        "alpha_Isc": 0.0005,
+        "beta_Voc": -0.0028,
+        "gamma_Pmp": -0.0037,
+        "cells": 96,
+        "NOCT": 45,
+        "area_ref": 1.63,
+        "u0": 26.91,
+        "u1": 6.2
+    },
+    "Polycrystalline": {
+        "name": "Canadian Solar CS6K-280P",
+        "Isc_ref": 9.23,
+        "Voc_ref": 38.5,
+        "Imp_ref": 8.78,
+        "Vmp_ref": 31.9,
+        "Pmp_ref": 280,
+        "alpha_Isc": 0.0006,
+        "beta_Voc": -0.0031,
+        "gamma_Pmp": -0.0041,
+        "cells": 60,
+        "NOCT": 45,
+        "area_ref": 1.64,
+        "u0": 26.91,
+        "u1": 6.2
+    },
+    "Thin-Film": {
+        "name": "First Solar FS-4110-2",
+        "Isc_ref": 2.73,
+        "Voc_ref": 61.4,
+        "Imp_ref": 2.45,
+        "Vmp_ref": 44.9,
+        "Pmp_ref": 110,
+        "alpha_Isc": 0.0004,
+        "beta_Voc": -0.0027,
+        "gamma_Pmp": -0.0030,
+        "cells": 1,
+        "NOCT": 45,
+        "area_ref": 0.72,
+        "u0": 23.37,
+        "u1": 5.44
+    }
+}
+
+
+def calculate_zenith_angle(timestamp, latitude, longitude, standard_meridian=135):
+    """Calculate zenith angle for a given timestamp and location."""
+    if isinstance(timestamp, np.datetime64):
+        timestamp = pd.Timestamp(timestamp)
+    lat_rad = np.radians(latitude)
+    day_of_year = timestamp.timetuple().tm_yday
+    declination = 23.45 * np.sin(np.radians(360 * (284 + day_of_year) / 365))
+    decl_rad = np.radians(declination)
+    B = (360 / 365) * (day_of_year - 81)
+    EOT = 9.87 * np.sin(np.radians(2 * B)) - 7.53 * np.cos(np.radians(B)) - 1.5 * np.sin(np.radians(B))
+    hour = timestamp.hour + timestamp.minute / 60.0
+    time_correction = (4 * (longitude - standard_meridian) + EOT) / 60.0
+    solar_time = hour + time_correction
+    hour_angle = 15 * (solar_time - 12)
+    hour_rad = np.radians(hour_angle)
+    cos_zenith = (np.sin(lat_rad) * np.sin(decl_rad) +
+                  np.cos(lat_rad) * np.cos(decl_rad) * np.cos(hour_rad))
+    zenith_angle = np.degrees(np.arccos(np.clip(cos_zenith, -1, 1)))
+    return zenith_angle, hour_angle, declination
+
+
+def calc_solar_altitude(timestamp, latitude, longitude):
+    """Calculate solar altitude from zenith angle."""
+    if isinstance(timestamp, np.datetime64):
+        timestamp = pd.Timestamp(timestamp)
+    zenith_angle, _, _ = calculate_zenith_angle(timestamp, latitude, longitude)
+    solar_altitude = 90 - zenith_angle
+    return solar_altitude
+
+
+def calc_solar_azimuth(timestamp, latitude, longitude):
+    """Calculate solar azimuth."""
+    if isinstance(timestamp, np.datetime64):
+        timestamp = pd.Timestamp(timestamp)
+    zenith, hour_angle, declination = calculate_zenith_angle(timestamp, latitude, longitude)
+    zenith_rad = np.radians(zenith)
+    hour_rad = np.radians(hour_angle)
+    decl_rad = np.radians(declination)
+    lat_rad = np.radians(latitude)
+    sin_az = np.sin(hour_rad) * np.cos(decl_rad) / np.sin(zenith_rad)
+    cos_az = (np.sin(zenith_rad) * np.sin(lat_rad) - np.sin(decl_rad)) / (np.cos(zenith_rad) * np.cos(lat_rad))
+    azimuth = np.degrees(np.arctan2(sin_az, cos_az))
+    azimuth = (azimuth + 180) % 360
+    return azimuth
+
+
+def calculate_air_mass(zenith_angle):
+    """Calculate air mass using the Kasten-Young (1989) formula."""
+    if zenith_angle >= 90:
+        return float('inf')
+    zenith_rad = np.radians(zenith_angle)
+    return 1 / (np.cos(zenith_rad) + 0.50572 * (96.07995 - zenith_angle) ** -1.6364)
+
+
+def decompose_ghi_disc(ghi, timestamp, latitude, longitude, standard_meridian=135):
+    """Decompose GHI into DNI and DHI using the DISC model."""
+    if isinstance(timestamp, np.datetime64):
+        timestamp = pd.Timestamp(timestamp)
+    zenith_angle, _, _ = calculate_zenith_angle(timestamp, latitude, longitude, standard_meridian)
+    zenith_angle = min(zenith_angle, MAX_ZENITH_ANGLE)
+    ghi = np.clip(ghi, GHI_MIN, GHI_MAX)
+    day_of_year = timestamp.timetuple().tm_yday
+    C = np.radians(360 * (day_of_year - 1) / 365)
+    re = (1.00011 + 0.034221 * np.cos(C) + 0.00128 * np.sin(C) +
+          0.000719 * np.cos(2 * C) + 0.000077 * np.sin(2 * C))
+    I0 = 1367 * re
+    cos_z = np.cos(np.radians(zenith_angle))
+    I0h = I0 * cos_z if cos_z > 0 else 0
+    m = calculate_air_mass(zenith_angle)
+    m = min(m, 10)
+    kt = ghi / I0h if I0h > 0 else 0
+    kt = np.clip(kt, 0, 1)
+    a = 0.4327 - 0.1925 * m + 0.01453 * m ** 2 - 0.0005127 * m ** 3
+    b = -0.3913 + 0.2779 * m - 0.02224 * m ** 2 + 0.0008042 * m ** 3
+    c = 0.9585 - 0.08529 * m + 0.005923 * m ** 2 - 0.0001978 * m ** 3
+    kn = a + b * kt + c * kt ** 2
+    kn = np.clip(kn, 0, 1)
+    dni = kn * I0 if cos_z > 0 else 0
+    dni = max(dni, 0)
+    dhi = ghi - dni * cos_z if cos_z > 0 else 0
+    dhi = max(dhi, 0)
+    return dni, dhi, I0, m
+
+
+def calculate_angle_of_incidence(timestamp, latitude, longitude, tilt, orientation):
+    """Calculate the angle of incidence (AOI) between the sun and the PV panel."""
+    if isinstance(timestamp, np.datetime64):
+        timestamp = pd.Timestamp(timestamp)
+    solar_altitude = calc_solar_altitude(timestamp, latitude, longitude)
+    solar_azimuth = calc_solar_azimuth(timestamp, latitude, longitude)
+    tilt_rad = np.radians(tilt)
+    orientation_rad = np.radians(orientation)
+    solar_altitude_rad = np.radians(solar_altitude)
+    solar_azimuth_rad = np.radians(solar_azimuth)
+    cos_aoi = (np.sin(solar_altitude_rad) * np.cos(tilt_rad) +
+               np.cos(solar_altitude_rad) * np.sin(tilt_rad) * np.cos(solar_azimuth_rad - orientation_rad))
+    cos_aoi = np.clip(cos_aoi, 0, 1)
+    aoi = np.degrees(np.arccos(cos_aoi))
+    return aoi
+
+
+def calculate_iam(aoi):
+    """Calculate Incidence Angle Modifier (IAM) per IEC 61853-2."""
+    b0 = 0.05
+    aoi_rad = np.radians(aoi)
+    if aoi >= 90:
+        return 0
+    iam = 1 - b0 * (1 / np.cos(aoi_rad) - 1)
+    return max(iam, 0)
+
+
+def calculate_perez_diffuse(dni, dhi, zenith_angle, aoi, air_mass, I0, tilt):
+    """Calculate diffuse irradiance on a tilted surface using the Perez model."""
+    Delta = (dhi * air_mass) / I0 if I0 > 0 else 0
+    epsilon = ((dhi + dni) / dhi + 5.535e-6 * zenith_angle ** 3) / (1 + 5.535e-6 * zenith_angle ** 3) if dhi > 0 else 1
+    epsilon_bins = [1.065, 1.230, 1.500, 1.950, 2.800, 4.500, 6.200, float('inf')]
+    bin_idx = 0
+    for i, threshold in enumerate(epsilon_bins):
+        if epsilon < threshold:
+            bin_idx = i
+            break
+    coeffs = PEREZ_COEFFS[bin_idx]
+    F1 = coeffs["f11"] + coeffs["f12"] * Delta + coeffs["f13"] * zenith_angle
+    F1 = max(F1, 0)
+    F2 = coeffs["f21"] + coeffs["f22"] * Delta + coeffs["f23"] * zenith_angle
+    a = max(0, np.cos(np.radians(aoi)))
+    b = max(np.cos(np.radians(85)), np.cos(np.radians(zenith_angle)))
+    tilt_rad = np.radians(tilt)
+    diffuse_tilted = dhi * ((1 - F1) * (1 + np.cos(tilt_rad)) / 2 + F1 * a / b + F2 * np.sin(tilt_rad))
+    return max(diffuse_tilted, 0)
+
+
+def calculate_gti(ghi, timestamps, latitude, longitude, tilt, orientation):
+    """Calculate Global Tilted Irradiance (GTI) with direct, diffuse (Perez model), and albedo components."""
+    gti_values = []
+    for i, ts in enumerate(timestamps):
+        zenith_angle, _, _ = calculate_zenith_angle(ts, latitude, longitude)
+        solar_altitude = calc_solar_altitude(ts, latitude, longitude)
+        solar_altitude_rad = np.radians(solar_altitude)
+        if solar_altitude <= 0 or zenith_angle >= MAX_ZENITH_ANGLE:
+            gti_values.append(0)
+            continue
+        dni, dhi, I0, m = decompose_ghi_disc(ghi[i], ts, latitude, longitude)
+        aoi = calculate_angle_of_incidence(ts, latitude, longitude, tilt, orientation)
+        iam = calculate_iam(aoi)
+        direct_tilted = dni * iam * np.cos(np.radians(aoi))
+        diffuse_tilted = calculate_perez_diffuse(dni, dhi, zenith_angle, aoi, m, I0, tilt)
+        tilt_rad = np.radians(tilt)
+        albedo_tilted = ghi[i] * ALBEDO * (1 - np.cos(tilt_rad)) / 2
+        gti = direct_tilted + diffuse_tilted + albedo_tilted
+        gti = max(gti, 0)
+        gti_values.append(gti)
+    return np.array(gti_values)
+
+
+def calculate_cell_temperature(ghi, temperature, wind_speed, u0, u1):
+    """Calculate PV cell temperature using the Faiman model (IEC 61724-2)."""
+    if not (len(ghi) == len(temperature) == len(wind_speed)):
+        raise ValueError("Length of ghi, temperature, and wind_speed arrays must match")
+    wind_speed = np.array([1.0 if ws is None else float(ws) for ws in wind_speed])
+    t_cell = temperature + ghi / (u0 + u1 * wind_speed)
+    return t_cell
+
+
+def calculate_inverter_efficiency(pdc, pdc_max):
+    """Calculate inverter efficiency as a function of load."""
+    load_ratio = pdc / pdc_max if pdc_max > 0 else 0
+    if load_ratio < 0.1:
+        eta = 0.85
+    elif load_ratio < 0.3:
+        eta = 0.90
+    elif load_ratio < 0.7:
+        eta = 0.95
+    else:
+        eta = 0.96
+    return eta
+
+
+def simple_efficiency_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature,
+                            wind_speed):
+    """Simple Efficiency Model."""
+    module = PV_MODULES[pv_type]
+    efficiency = module["Pmp_ref"] / (G_STC * module["area_ref"])
+    t_cell = calculate_cell_temperature(gti, temperature, wind_speed, module["u0"], module["u1"])
+    temp_diff = t_cell - T_STC
+    adjusted_efficiency = efficiency * (1 + module["gamma_Pmp"] * temp_diff)
+    adjusted_efficiency = np.clip(adjusted_efficiency, 0, 1)
+    pdc = gti * area * adjusted_efficiency
+    pac = np.zeros_like(pdc)
+    pdc_max = max(pdc) if max(pdc) > 0 else 1
+    for i in range(len(pdc)):
+        eta = calculate_inverter_efficiency(pdc[i], pdc_max)
+        pac[i] = pdc[i] * eta
+    I = pdc / module["Vmp_ref"]
+    V = module["Vmp_ref"] * np.ones_like(I)
+    return gti, pdc, pac, I, V
+
+
+def single_diode_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature, wind_speed):
+    """Single Diode Model with Newton-Raphson MPP calculation."""
+    module = PV_MODULES[pv_type]
+    t_cell = calculate_cell_temperature(gti, temperature, wind_speed, module["u0"], module["u1"])
+    Isc_ref = module["Isc_ref"]
+    Voc_ref = module["Voc_ref"]
+    Imp_ref = module["Imp_ref"]
+    Vmp_ref = module["Vmp_ref"]
+    alpha_Isc = module["alpha_Isc"]
+    beta_Voc = module["beta_Voc"]
+    n_cells = module["cells"]
+    T_ref = T_STC + 273.15
+    Vt_ref = k_b * T_ref / q
+    n = 1.0
+    I0_ref = Isc_ref / (np.exp(Voc_ref / (n * n_cells * Vt_ref)) - 1)
+    Rs = (Voc_ref - Vmp_ref) / Imp_ref
+    Rsh_ref = Vmp_ref / (Isc_ref - Imp_ref)
+    pdc = []
+    pac = []
+    I_mpp = []
+    V_mpp = []
+    for i in range(len(gti)):
+        G = gti[i]
+        T = t_cell[i] + 273.15
+        Vt = k_b * T / q
+        Isc = Isc_ref * (G / G_STC) * (1 + alpha_Isc * (T - T_ref))
+        I0 = I0_ref * (T / T_ref) ** 3 * np.exp((q * Voc_ref / (n * k_b)) * (1 / T_ref - 1 / T))
+        Voc = Voc_ref + beta_Voc * (T - T_ref) + n * n_cells * Vt * np.log(G / G_STC) if G > 0 else 0
+        Rsh = Rsh_ref * (G_STC / G) if G > 0 else Rsh_ref
+        V = Vmp_ref
+        I = Imp_ref
+        tol = 1e-6
+        max_iter = 100
+        for _ in range(max_iter):
+            I = Isc - I0 * (np.exp((V + I * Rs) / (n * n_cells * Vt)) - 1) - (V + I * Rs) / Rsh
+            P = V * I
+            dI_dV = -I0 / (n * n_cells * Vt) * np.exp((V + I * Rs) / (n * n_cells * Vt)) * (1 + Rs * dI_dV) - 1 / Rsh
+            dI_dV = dI_dV / (1 + Rs * I0 / (n * n_cells * Vt) * np.exp((V + I * Rs) / (n * n_cells * Vt)))
+            dP_dV = I + V * dI_dV
+            if abs(dP_dV) < tol:
+                break
+            V -= dP_dV / (dI_dV + I + V * dI_dV ** 2)
+        I = Isc - I0 * (np.exp((V + I * Rs) / (n * n_cells * Vt)) - 1) - (V + I * Rs) / Rsh
+        pdc_val = V * I
+        eta = calculate_inverter_efficiency(pdc_val, pdc_val * 1.1)
+        pac_val = pdc_val * eta
+        pdc.append(pdc_val)
+        pac.append(pac_val)
+        I_mpp.append(I)
+        V_mpp.append(V)
+    return gti, np.array(pdc), np.array(pac), np.array(I_mpp), np.array(V_mpp)
+
+
+def cec_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature, wind_speed):
+    """CEC Model (Six Parameter Model) with Newton-Raphson MPP calculation."""
+    return single_diode_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature,
+                              wind_speed)
+
+
+def sandia_array_performance_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature,
+                                   wind_speed):
+    """Sandia Array Performance Model (SAPM) - Simplified."""
+    module = PV_MODULES[pv_type]
+    t_cell = calculate_cell_temperature(gti, temperature, wind_speed, module["u0"], module["u1"])
+    temp_diff = t_cell - T_STC
+    efficiency = module["Pmp_ref"] / (G_STC * module["area_ref"])
+    adjusted_efficiency = efficiency * (1 + module["gamma_Pmp"] * temp_diff)
+    adjusted_efficiency = np.clip(adjusted_efficiency, 0, 1)
+    pdc = gti * area * adjusted_efficiency
+    pac = np.zeros_like(pdc)
+    pdc_max = max(pdc) if max(pdc) > 0 else 1
+    for i in range(len(pdc)):
+        eta = calculate_inverter_efficiency(pdc[i], pdc_max)
+        pac[i] = pdc[i] * eta
+    I = pdc / module["Vmp_ref"]
+    V = module["Vmp_ref"] * np.ones_like(I)
+    return gti, pdc, pac, I, V
+
+
+def calculate_iec_metrics(pdc_actual, pac_actual, pdc_forecasted, pac_forecasted, ghi_actual, ghi_forecasted, area,
+                          pmp_ref, hours=3):
+    """Calculate IEC performance metrics with CSER using IEC 61853-3, returning scalar values."""
+    pdc_actual = float(pdc_actual[0]) if isinstance(pdc_actual, np.ndarray) else float(pdc_actual)
+    pac_actual = float(pac_actual[0]) if isinstance(pac_actual, np.ndarray) else float(pac_actual)
+    ghi_actual = float(ghi_actual[0]) if isinstance(ghi_actual, np.ndarray) else float(ghi_actual)
+    hours = max(float(hours), 0.5)
+    Yr = ghi_actual * hours / 1000
+    Yf = pac_actual * hours / (pmp_ref * 1000)
+    PR = Yf / Yr if Yr > 0 else 0
+    CF = (pac_actual * hours) / (pmp_ref * 1000 * hours)
+    EPI = np.mean([p_f / pac_actual if pac_actual > 0 else 0 for p_f in pac_forecasted])
+    measured_output = pac_actual * hours
+    expected_output = pmp_ref * G_STC * hours / 1000
+    CSER = measured_output / expected_output if expected_output > 0 else 0
+    return {
+        "Yf": Yf,
+        "PR": PR,
+        "CF": CF,
+        "EPI": EPI,
+        "CSER": CSER
+    }
+
+
+def pv_performance(ghi, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature, wind_speed,
+                   model_type="simple"):
+    """Calculate PV performance metrics using SAM models."""
+    gti = calculate_gti(ghi, timestamps, latitude, longitude, tilt, orientation)
+    if model_type == "simple":
+        return simple_efficiency_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation,
+                                       temperature, wind_speed)
+    elif model_type == "sapm":
+        return sandia_array_performance_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation,
+                                              temperature, wind_speed)
+    elif model_type == "single_diode":
+        return single_diode_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature,
+                                  wind_speed)
+    elif model_type == "cec":
+        return cec_model(gti, timestamps, latitude, longitude, pv_type, area, tilt, orientation, temperature,
+                         wind_speed)
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
+
+
+def fetch_forecasted_data(latitude, longitude, start_time, end_time, forecast_db_path, weather_db_path, current_time):
+    """Fetch forecasted GHI and weather data based on the latest forecast cycle."""
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.FileHandler('pv_performance.log'), logging.StreamHandler()]
+    )
+    logger = logging.getLogger(__name__)
+
+    conn_forecast = sqlite3.connect(forecast_db_path)
+    conn_weather = sqlite3.connect(weather_db_path)
+
+    current_time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Debug: Fetch all available forecast data to inspect the database
+    debug_query_forecast = """
+                           SELECT lat, lon, timestamp, timestep, GHI
+                           FROM forecast_data
+                           ORDER BY timestamp DESC
+                               LIMIT 10 \
+                           """
+    debug_forecast_df = pd.read_sql_query(debug_query_forecast, conn_forecast)
+    logger.info(f"Available forecast data (top 10 rows): {debug_forecast_df.to_dict('records')}")
+
+    # Step 1: Find the latest forecast cycle by fetching the most recent timestep = 1
+    # Use a small tolerance for lat and lon comparisons to handle floating-point precision
+    lat_lower = latitude - 1e-6
+    lat_upper = latitude + 1e-6
+    lon_lower = longitude - 1e-6
+    lon_upper = longitude + 1e-6
+    query_latest_cycle = """
+                         SELECT timestamp
+                         FROM forecast_data
+                         WHERE lat BETWEEN ? \
+                           AND ?
+                           AND lon BETWEEN ? \
+                           AND ?
+                           AND timestep = 1
+                           AND timestamp <= ?
+                         ORDER BY timestamp DESC
+                             LIMIT 1 \
+                         """
+    logger.info(
+        f"Finding latest forecast cycle for lat={latitude}, lon={longitude}, before {current_time_str} with timestep=1.")
+    latest_cycle_df = pd.read_sql_query(
+        query_latest_cycle,
+        conn_forecast,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper, current_time_str)
+    )
+    if latest_cycle_df.empty:
+        logger.error(
+            f"No forecast cycle found with timestep=1 for lat={latitude}, lon={longitude} before {current_time_str}.")
+        conn_forecast.close()
+        conn_weather.close()
+        return None, None, None, None, None, None
+
+    latest_cycle_timestamp = pd.to_datetime(latest_cycle_df['timestamp'].iloc[0])
+    logger.info(f"Latest forecast cycle starts at {latest_cycle_timestamp} (assumed KST).")
+
+    # Step 2: Fetch the forecast data for timesteps 1 to 6 in this cycle
+    query_ghi = """
+                SELECT timestamp, GHI, timestep
+                FROM forecast_data
+                WHERE lat BETWEEN ? \
+                  AND ?
+                  AND lon BETWEEN ? \
+                  AND ?
+                  AND timestamp >= ?
+                  AND timestep BETWEEN 1 \
+                  AND 6
+                ORDER BY timestep \
+                """
+    logger.info(
+        f"Fetching forecast GHI data for lat={latitude}, lon={longitude}, starting from {latest_cycle_timestamp} for timesteps 1 to 6.")
+    ghi_df = pd.read_sql_query(
+        query_ghi,
+        conn_forecast,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper, latest_cycle_timestamp.strftime("%Y-%m-%d %H:%M:%S"))
+    )
+    logger.info(f"Forecast GHI data query result: {len(ghi_df)} rows found.")
+    if not ghi_df.empty:
+        logger.debug(f"GHI data sample: {ghi_df.to_dict(orient='records')}")
+    # Since database timestamps are already in KST, we don't need to localize them
+    ghi_df['timestamp'] = pd.to_datetime(ghi_df['timestamp'])
+
+    # Deduplicate GHI data by keeping the most recent entry for each timestep
+    if not ghi_df.empty:
+        ghi_df = ghi_df.sort_values(by=['timestamp', 'timestep']).drop_duplicates(subset=['timestamp'], keep='last')
+        logger.info(f"After deduplication, GHI data: {ghi_df.to_dict(orient='records')}")
+    else:
+        logger.warning(
+            f"No forecast data found for the latest cycle starting at {latest_cycle_timestamp}. Using default values.")
+        conn_forecast.close()
+        conn_weather.close()
+        return None, None, None, None, None, None
+
+    # Define expected timestamps based on the GHI data
+    expected_timestamps = ghi_df['timestamp'].values
+    logger.info(f"Expected forecast timestamps based on GHI: {expected_timestamps}")
+
+    # Create a DataFrame with the GHI timestamps
+    ghi_full_df = pd.DataFrame({
+        'timestamp': expected_timestamps,
+        'GHI': ghi_df['GHI'],
+        'timestep': ghi_df['timestep']
+    })
+
+    # Fetch all forecast weather data for the location to inspect available data
+    debug_query_weather = """
+                          SELECT forecast_time
+                          FROM forecasted_weather_data
+                          WHERE lat BETWEEN ? AND ?
+                            AND lon BETWEEN ? AND ?
+                          ORDER BY forecast_time DESC \
+                          """
+    lat_lower = latitude - 0.01
+    lat_upper = latitude + 0.01
+    lon_lower = longitude - 0.01
+    lon_upper = longitude + 0.01
+    debug_weather_df = pd.read_sql_query(
+        debug_query_weather,
+        conn_weather,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper)
+    )
+    logger.info(
+        f"All available forecast weather timestamps for lat={latitude}, lon={longitude}: {debug_weather_df['forecast_time'].tolist()}")
+
+    # Fetch weather forecast data within the range of GHI timestamps
+    # Convert numpy.datetime64 to pd.Timestamp before formatting
+    time_min = pd.Timestamp(expected_timestamps[0]).strftime("%Y-%m-%d %H:%M:%S")
+    time_max = pd.Timestamp(expected_timestamps[-1]).strftime("%Y-%m-%d %H:%M:%S")
+    query_weather = """
+                    SELECT lat, lon, temperature, wind_speed, forecast_time
+                    FROM forecasted_weather_data
+                    WHERE lat BETWEEN ? AND ?
+                      AND lon BETWEEN ? AND ?
+                      AND forecast_time >= ?
+                      AND forecast_time <= ?
+                    ORDER BY forecast_time \
+                    """
+    logger.info(
+        f"Fetching weather data for lat between {lat_lower} and {lat_upper}, lon between {lon_lower} and {lon_upper}, forecast_time between {time_min} and {time_max}.")
+    weather_df = pd.read_sql_query(
+        query_weather,
+        conn_weather,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper, time_min, time_max)
+    )
+    logger.info(f"Weather data query result: {len(weather_df)} rows found.")
+    if not weather_df.empty:
+        logger.debug(f"Weather data sample: {weather_df.to_dict(orient='records')}")
+    # Since database timestamps are already in KST, we don't need to localize them
+    weather_df['forecast_time'] = pd.to_datetime(weather_df['forecast_time'])
+
+    conn_forecast.close()
+    conn_weather.close()
+
+    # Rename forecast_time to timestamp for alignment
+    weather_df = weather_df.rename(columns={'forecast_time': 'timestamp'})
+
+    # Deduplicate weather_df by keeping the most recent entry for each (timestamp, lat, lon)
+    if not weather_df.empty:
+        weather_df = weather_df.sort_values(by=['timestamp', 'lat', 'lon']).drop_duplicates(
+            subset=['timestamp', 'lat', 'lon'], keep='last')
+
+    # Create a DataFrame with GHI timestamps for weather data alignment
+    weather_full_df = pd.DataFrame({'timestamp': expected_timestamps})
+    weather_full_df = weather_full_df.merge(weather_df, on='timestamp', how='left')
+
+    # Interpolate weather data to fill gaps
+    weather_full_df['temperature'] = weather_full_df['temperature'].interpolate(method='linear', limit_direction='both')
+    weather_full_df['wind_speed'] = weather_full_df['wind_speed'].interpolate(method='linear', limit_direction='both')
+    weather_full_df['lat'] = weather_full_df['lat'].fillna(latitude)
+    weather_full_df['lon'] = weather_full_df['lon'].fillna(longitude)
+
+    # Replace any remaining None or NaN values with defaults, and adjust unrealistic temperatures
+    weather_full_df['temperature'] = weather_full_df['temperature'].fillna(25.0)
+    weather_full_df['wind_speed'] = weather_full_df['wind_speed'].fillna(1.0)
+    weather_full_df['temperature'] = weather_full_df['temperature'].apply(
+        lambda x: 25.0 if x < 15.0 else x  # Adjust temperatures below 15°C to 25°C
+    )
+
+    # Merge GHI and weather data using GHI timestamps as the reference
+    merged_df = pd.DataFrame(columns=['timestamp', 'GHI', 'timestep', 'temperature', 'wind_speed'])
+    for idx, row in ghi_full_df.iterrows():
+        ghi_time = pd.Timestamp(row['timestamp'])
+        weather_row = weather_full_df[weather_full_df['timestamp'] == ghi_time]
+        if not weather_row.empty:
+            merged_row = {
+                'timestamp': ghi_time,
+                'GHI': row['GHI'],
+                'timestep': row['timestep'],
+                'temperature': weather_row['temperature'].iloc[0],
+                'wind_speed': weather_row['wind_speed'].iloc[0]
+            }
+        else:
+            logger.warning(f"No weather data found for {ghi_time}. Using default values.")
+            merged_row = {
+                'timestamp': ghi_time,
+                'GHI': row['GHI'],
+                'timestep': row['timestep'],
+                'temperature': 25.0,
+                'wind_speed': 1.0
+            }
+        merged_df = pd.concat([merged_df, pd.DataFrame([merged_row])], ignore_index=True)
+
+    logger.info(f"Merged dataframe has {len(merged_df)} rows after joining forecast and weather data.")
+    return (merged_df['timestamp'].values,
+            merged_df['GHI'].values,
+            merged_df['temperature'].values,
+            merged_df['wind_speed'].values,
+            merged_df['GHI'].values,
+            merged_df['GHI'].values)
+
+
+def fetch_historical_data(latitude, longitude, start_time, end_time, ghi_db_path, weather_db_path, current_time):
+    """Fetch the most recent historical GHI and weather data before the current time."""
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.FileHandler('pv_performance.log'), logging.StreamHandler()]
+    )
+    logger = logging.getLogger(__name__)
+
+    conn_ghi = sqlite3.connect(ghi_db_path)
+    conn_weather = sqlite3.connect(weather_db_path)
+
+    current_time_str = current_time.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Debug: Fetch all available timestamps in the range to inspect the data
+    lat_lower = latitude - 1e-6
+    lat_upper = latitude + 1e-6
+    lon_lower = longitude - 1e-6
+    lon_upper = longitude + 1e-6
+    debug_query_ghi = """
+                      SELECT timestamp
+                      FROM ghi_data
+                      WHERE lat BETWEEN ? \
+                        AND ?
+                        AND lon BETWEEN ? \
+                        AND ?
+                        AND timestamp <= ?
+                      ORDER BY timestamp DESC \
+                      """
+    debug_ghi_df = pd.read_sql_query(
+        debug_query_ghi,
+        conn_ghi,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper, current_time_str)
+    )
+    logger.info(
+        f"Available GHI timestamps for lat={latitude}, lon={longitude} before {current_time_str}: {debug_ghi_df['timestamp'].tolist()}")
+
+    # Fetch the most recent GHI data before the current time
+    query_ghi = """
+                SELECT timestamp, GHI
+                FROM ghi_data
+                WHERE lat BETWEEN ? \
+                  AND ?
+                  AND lon BETWEEN ? \
+                  AND ?
+                  AND timestamp <= ?
+                ORDER BY timestamp DESC
+                    LIMIT 1 \
+                """
+    try:
+        ghi_df = pd.read_sql_query(
+            query_ghi,
+            conn_ghi,
+            params=(lat_lower, lat_upper, lon_lower, lon_upper, current_time_str)
+        )
+        # Since database timestamps are already in KST, we don't need to localize them
+        ghi_df['timestamp'] = pd.to_datetime(ghi_df['timestamp'])
+    except Exception as e:
+        logger.error(f"Error querying ghi_data table: {str(e)}")
+        conn_ghi.close()
+        conn_weather.close()
+        raise
+
+    # Debug: Fetch all available weather timestamps in the range to inspect the data
+    debug_query_weather = """
+                          SELECT timestamp
+                          FROM weather_data
+                          WHERE lat BETWEEN ? \
+                            AND ?
+                            AND lon BETWEEN ? \
+                            AND ?
+                            AND timestamp <= ?
+                            AND data_type = 'historical'
+                          ORDER BY timestamp DESC \
+                          """
+    debug_weather_df = pd.read_sql_query(
+        debug_query_weather,
+        conn_weather,
+        params=(lat_lower, lat_upper, lon_lower, lon_upper, current_time_str)
+    )
+    logger.info(
+        f"Available weather timestamps for lat={latitude}, lon={longitude} before {current_time_str}: {debug_weather_df['timestamp'].tolist()}")
+
+    # Fetch the most recent weather data before the current time
+    query_weather = """
+                    SELECT timestamp, temperature, wind_speed
+                    FROM weather_data
+                    WHERE lat BETWEEN ? \
+                      AND ?
+                      AND lon BETWEEN ? \
+                      AND ?
+                      AND timestamp <= ?
+                      AND data_type = 'historical'
+                    ORDER BY timestamp DESC
+                        LIMIT 1 \
+                    """
+    try:
+        weather_df = pd.read_sql_query(
+            query_weather,
+            conn_weather,
+            params=(lat_lower, lat_upper, lon_lower, lon_upper, current_time_str)
+        )
+        # Since database timestamps are already in KST, we don't need to localize them
+        weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+        if weather_df['wind_speed'].isnull().any():
+            logger.warning(
+                f"Historical weather data contains None values for wind_speed at lat={latitude}, lon={longitude}.")
+    except Exception as e:
+        logger.error(f"Error querying weather_data table: {str(e)}")
+        conn_ghi.close()
+        conn_weather.close()
+        raise
+
+    merged_df = pd.merge(ghi_df, weather_df, on='timestamp', how='inner')
+    if merged_df.empty:
+        logger.warning(
+            f"No historical data found for exact location (lat={latitude}, lon={longitude}) before {current_time_str}. Attempting to fetch nearest data.")
+        start_time = current_time - timedelta(hours=1)
+        start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+        query_ghi = """
+                    SELECT timestamp, GHI
+                    FROM ghi_data
+                    WHERE lat BETWEEN ? \
+                      AND ?
+                      AND lon BETWEEN ? \
+                      AND ?
+                      AND timestamp BETWEEN ? \
+                      AND ?
+                      AND timestamp <= ?
+                    ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?))
+                        LIMIT 1 \
+                    """
+        query_weather = """
+                        SELECT timestamp, temperature, wind_speed
+                        FROM weather_data
+                        WHERE lat BETWEEN ? \
+                          AND ?
+                          AND lon BETWEEN ? \
+                          AND ?
+                          AND timestamp BETWEEN ? \
+                          AND ?
+                          AND data_type = 'historical'
+                          AND timestamp <= ?
+                        ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?))
+                            LIMIT 1 \
+                        """
+        try:
+            ghi_df = pd.read_sql_query(
+                query_ghi,
+                conn_ghi,
+                params=(lat_lower, lat_upper, lon_lower, lon_upper, start_time_str, current_time_str, current_time_str,
+                        current_time_str)
+            )
+            weather_df = pd.read_sql_query(
+                query_weather,
+                conn_weather,
+                params=(lat_lower, lat_upper, lon_lower, lon_upper, start_time_str, current_time_str, current_time_str,
+                        current_time_str)
+            )
+            ghi_df['timestamp'] = pd.to_datetime(ghi_df['timestamp'])
+            weather_df['timestamp'] = pd.to_datetime(weather_df['timestamp'])
+            merged_df = pd.merge(ghi_df, weather_df, on='timestamp', how='inner')
+            if weather_df['wind_speed'].isnull().any():
+                logger.warning(
+                    f"Fallback historical weather data contains None values for wind_speed at lat={latitude}, lon={longitude}.")
+        except Exception as e:
+            logger.error(f"Error in fallback query for historical data: {str(e)}")
+            conn_ghi.close()
+            conn_weather.close()
+            raise
+
+    conn_ghi.close()
+    conn_weather.close()
+
+    if merged_df.empty:
+        logger.error(f"No historical data available for lat={latitude}, lon={longitude} before {current_time_str}.")
+        raise ValueError("No historical data available for the specified location and time range.")
+
+    # Freshness check: Ensure the data is not older than 1 hour
+    latest_timestamp = pd.to_datetime(merged_df['timestamp'].iloc[0])
+    time_diff = current_time - latest_timestamp
+    if time_diff > pd.Timedelta(hours=1):
+        logger.warning(
+            f"Historical data is stale: latest timestamp is {latest_timestamp}, current time is {current_time}, difference is {time_diff}.")
+
+    # Replace None or NaN values with defaults
+    merged_df['GHI'] = merged_df['GHI'].fillna(0.0)
+    merged_df['temperature'] = merged_df['temperature'].fillna(25.0)
+    merged_df['wind_speed'] = merged_df['wind_speed'].fillna(1.0)
+    # Adjust temperatures below 15°C (unrealistic for Seoul in June) to a more reasonable value
+    merged_df['temperature'] = merged_df['temperature'].apply(
+        lambda x: 25.0 if x < 15.0 else x
+    )
+
+    return (merged_df['timestamp'].values,
+            merged_df['GHI'].values,
+            merged_df['temperature'].values,
+            merged_df['wind_speed'].values)
+			
+
+////////////////////////////////////////////................................end of pv_models.py..................//////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////................................index.html............................/////////////////////////////////////////////////////
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Performance Prediction Tool</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons (used in AdminLTE) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- Plotly JS (Updated to version 2.35.2) -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Ensure plots are responsive and fit within the card */
+        .card-body .plot-container {
+            width: 100%;
+            height: 400px;
+        }
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0.75rem 1.25rem;
+            color: inherit;
+        }
+    </style>
+</head>
+<body class="hold-transition sidebar-mini">
+<div class="wrapper">
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-dark navbar-primary">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="#">PV Performance Tool</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <a href="#" class="brand-link">
+            <span class="brand-text font-weight-light">PV Tool</span>
+        </a>
+        <div class="sidebar">
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active">
+                            <i class="nav-icon fas fa-tachometer-alt"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-info-circle"></i>
+                            <p>About</p>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <!-- Content Header -->
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">PV Performance Prediction Tool for Seoul</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <section class="content">
+            <div class="container-fluid">
+                <!-- Error Message -->
+                {% if error %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-exclamation-triangle"></i> Error!</h5>
+                        {{ error }}
+                    </div>
+                {% endif %}
+
+                <!-- Forecast Message -->
+                {% if forecast_message %}
+                    <div class="alert alert-info alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-info-circle"></i> Forecast Information</h5>
+                        {{ forecast_message }}
+                    </div>
+                {% endif %}
+
+                <!-- Input Form -->
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">Input Parameters</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" id="pvForm">
+                            <!-- Location Selection -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Location Selection Method:</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="lat_source" id="mapSelect" value="map" checked>
+                                        <label class="form-check-label" for="mapSelect">
+                                            Select from Map or Search
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="lat_source" id="manualSelect" value="manual">
+                                        <label class="form-check-label" for="manualSelect">
+                                            Enter Coordinates Manually
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Map Selection with Search -->
+                            <div id="mapSection">
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="locationSearch" class="form-label" data-bs-toggle="tooltip" title="Search for a location in Seoul by district (e.g., Jongno-gu, Myeongdong)">Search Location:</label>
+                                        <input type="text" id="locationSearch" class="form-control" placeholder="Search by district (e.g., Jongno-gu, Myeongdong)">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="map" class="form-label" data-bs-toggle="tooltip" title="Click on the map or a marker to select a location in Seoul">Select Location on Map:</label>
+                                        <div id="map" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="latitude" class="form-label">Selected Latitude:</label>
+                                        <input type="text" name="latitude" id="latitude" class="form-control" readonly required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="longitude" class="form-label">Selected Longitude:</label>
+                                        <input type="text" name="longitude" id="longitude" class="form-control" readonly required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Coordinate Input -->
+                            <div id="manualSection" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="manual_lat" class="form-label" data-bs-toggle="tooltip" title="Enter latitude between 37.4 and 37.7 (Seoul bounds), e.g., 37.4473684210526">Latitude (37.4 to 37.7):</label>
+                                        <input type="number" name="manual_lat" id="manual_lat" class="form-control" step="0.0000000000001" min="37.4" max="37.7" placeholder="e.g., 37.4473684210526" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="manual_lon" class="form-label" data-bs-toggle="tooltip" title="Enter longitude between 126.8 and 127.2 (Seoul bounds), e.g., 126.926315789474">Longitude (126.8 to 127.2):</label>
+                                        <input type="number" name="manual_lon" id="manual_lon" class="form-control" step="0.0000000000001" min="126.8" max="127.2" placeholder="e.g., 126.926315789474" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Inputs -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="pv_type" class="form-label" data-bs-toggle="tooltip" title="Type of PV module affecting efficiency">PV Type:</label>
+                                    <select name="pv_type" id="pv_type" class="form-control" required>
+                                        {% for pv_type in pv_types %}
+                                            <option value="{{ pv_type }}" {% if pv_type == selected_pv_type %}selected{% endif %}>{{ pv_type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="area" class="form-label" data-bs-toggle="tooltip" title="Area of the PV panel in square meters">PV Area (m²):</label>
+                                    <input type="number" name="area" id="area" class="form-control" value="{{ selected_area if selected_area else 10 }}" step="0.1" min="0" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="tilt" class="form-label" data-bs-toggle="tooltip" title="Angle of the PV panel from the horizontal (0-90 degrees)">Tilt (degrees):</label>
+                                    <input type="number" name="tilt" id="tilt" class="form-control" value="{{ selected_tilt if selected_tilt else 30 }}" step="0.1" min="0" max="90" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Orientation Selection Method:</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="orientation_source" id="dropdownOrientation" value="dropdown" checked>
+                                        <label class="form-check-label" for="dropdownOrientation">
+                                            Select from Dropdown
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="orientation_source" id="manualOrientation" value="manual">
+                                        <label class="form-check-label" for="manualOrientation">
+                                            Enter Manually
+                                        </label>
+                                    </div>
+                                    <div id="dropdownOrientationSection">
+                                        <label for="orientation" class="form-label" data-bs-toggle="tooltip" title="Orientation of the PV panel (e.g., 0°=South, -90°=East, 90°=West, 180°=North)">Orientation:</label>
+                                        <select name="orientation" id="orientation" class="form-control" required>
+                                            {% for value, label in orientation_options %}
+                                                <option value="{{ value }}" {% if value == selected_orientation %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div id="manualOrientationSection" style="display: none;">
+                                        <label for="manual_orientation" class="form-label" data-bs-toggle="tooltip" title="Enter orientation in degrees (e.g., 0°=South, -90°=East, 90°=West, 180°=North)">Orientation (degrees):</label>
+                                        <input type="number" name="manual_orientation" id="manual_orientation" class="form-control" step="0.1" placeholder="e.g., 45">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="model_type" class="form-label" data-bs-toggle="tooltip" title="SAM model for PV performance calculation">SAM Model:</label>
+                                    <select name="model_type" id="model_type" class="form-control" required>
+                                        {% for model in model_types %}
+                                            <option value="{{ model }}" {% if model == selected_model_type %}selected{% endif %}>{{ model.replace('_', ' ').title() }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">Calculate PV Performance</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Current Results -->
+                {% if current_results %}
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Current PV Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>GHI (W/m²)</th>
+                                            <th>GTI (W/m²)</th>
+                                            <th>Pdc (W)</th>
+                                            <th>Pac (W)</th>
+                                            <th>I (A)</th>
+                                            <th>V (V)</th>
+                                            <th>Temperature (°C)</th>
+                                            <th>Wind Speed (m/s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ current_results.timestamp }}</td>
+                                            <td>{{ current_results.ghi }}</td>
+                                            <td>{{ current_results.gti }}</td>
+                                            <td>{{ current_results.pdc }}</td>
+                                            <td>{{ current_results.pac }}</td>
+                                            <td>{{ current_results.I }}</td>
+                                            <td>{{ current_results.V }}</td>
+                                            <td>{{ current_results.temperature }}</td>
+                                            <td>{{ current_results.wind_speed }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Forecast Results -->
+                {% if forecast_results %}
+                    <div class="card card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">Forecasted PV Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>GHI (W/m²)</th>
+                                            <th>GTI (W/m²)</th>
+                                            <th>Pdc (W)</th>
+                                            <th>Pac (W)</th>
+                                            <th>I (A)</th>
+                                            <th>V (V)</th>
+                                            <th>Temperature (°C)</th>
+                                            <th>Wind Speed (m/s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in forecast_results %}
+                                            <tr>
+                                                <td>{{ result.timestamp }}</td>
+                                                <td>{{ result.ghi }}</td>
+                                                <td>{{ result.gti }}</td>
+                                                <td>{{ result.pdc }}</td>
+                                                <td>{{ result.pac }}</td>
+                                                <td>{{ result.I }}</td>
+                                                <td>{{ result.V }}</td>
+                                                <td>{{ result.temperature }}</td>
+                                                <td>{{ result.wind_speed }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IEC Metrics -->
+                    <div class="card card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title">IEC Performance Metrics</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for key, value in iec_metrics.items() %}
+                                            <tr>
+                                                <td>{{ key }}</td>
+                                                <td>{{ value }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plots -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">GHI (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="ghi_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">PV Power Output (Pac) (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="pac_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">Current and Voltage at MPP (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="iv_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="float-right d-none d-sm-block">
+            <b>Version</b> 1.0.0
+        </div>
+        <strong>© 2025 PV Performance Prediction Tool. All rights reserved.</strong>
+    </footer>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+<!-- Define locations variable -->
+<script>
+    var locations = {{ location_options_with_labels | tojson | default('[]') }};
+    console.log("Locations data:", locations);
+</script>
+
+<!-- Main JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Map Initialization
+    try {
+        console.log('Map script loaded successfully');
+
+        // Verify Leaflet library loaded
+        if (typeof L === 'undefined') {
+            throw new Error("Leaflet library failed to load.");
+        }
+
+        // Verify map element exists
+        var mapElement = document.getElementById('map');
+        if (!mapElement) {
+            throw new Error("Map element with id='map' not found in the DOM.");
+        }
+
+        // Define icon configurations as separate variables
+        var defaultIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        var selectedIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        var customIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        // Initialize the map centered on Seoul
+        var map = L.map('map').setView([37.55, 127.0], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add markers for the locations from locations_eng.xlsx
+        var selectedMarker = null;
+        var markers = [];
+        var customMarker = null;
+
+        function updateMap(filteredLocations) {
+            // Clear existing markers except the custom marker
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            // Add new markers
+            filteredLocations.forEach(function(loc) {
+                if (!Array.isArray(loc) || loc.length < 3) {
+                    console.error("Invalid location data:", loc);
+                    return;
+                }
+                var marker = L.marker([loc[0], loc[1]], { icon: defaultIcon }).addTo(map);
+                marker.bindPopup(loc[2]);
+                marker.on('click', function() {
+                    document.getElementById('latitude').value = loc[0];
+                    document.getElementById('longitude').value = loc[1];
+
+                    if (selectedMarker) {
+                        selectedMarker.setIcon(defaultIcon);
+                    }
+                    marker.setIcon(selectedIcon);
+                    selectedMarker = marker;
+
+                    // Remove custom marker if it exists
+                    if (customMarker) {
+                        map.removeLayer(customMarker);
+                        customMarker = null;
+                    }
+                });
+                markers.push(marker);
+            });
+        }
+
+        // Initial map population
+        if (locations && locations.length > 0) {
+            updateMap(locations);
+            // Set default selection to the first location
+            var latInput = document.getElementById('latitude');
+            var lonInput = document.getElementById('longitude');
+            if (latInput && lonInput) {
+                latInput.value = locations[0][0];
+                lonInput.value = locations[0][1];
+                markers[0].setIcon(selectedIcon);
+                selectedMarker = markers[0];
+            } else {
+                console.error("Latitude or longitude input elements not found.");
+            }
+        } else {
+            console.error("No locations available to display on the map.");
+        }
+
+        // Search functionality
+        var locationSearch = document.getElementById('locationSearch');
+        if (locationSearch) {
+            locationSearch.addEventListener('input', function(e) {
+                var searchValue = e.target.value.toLowerCase();
+                var filteredLocations = locations.filter(function(loc) {
+                    return loc[2].toLowerCase().includes(searchValue);
+                });
+                updateMap(filteredLocations);
+            });
+        } else {
+            console.error("Location search input element not found.");
+        }
+
+        // Map click event to select a custom location
+        map.on('click', function(e) {
+            var lat = e.latlng.lat;
+            var lng = e.latlng.lng;
+
+            // Validate coordinates within Seoul bounds
+            if (lat < 37.4 || lat > 37.7 || lng < 126.8 || lng > 127.2) {
+                alert("Selected location is outside Seoul bounds (Lat: 37.4 to 37.7, Lon: 126.8 to 127.2). Please select a location within Seoul.");
+                return;
+            }
+
+            // Update form fields
+            var latInput = document.getElementById('latitude');
+            var lonInput = document.getElementById('longitude');
+            if (latInput && lonInput) {
+                latInput.value = lat;
+                lonInput.value = lng;
+            } else {
+                console.error("Latitude or longitude input elements not found.");
+                return;
+            }
+
+            // Remove existing custom marker if it exists
+            if (customMarker) {
+                map.removeLayer(customMarker);
+            }
+
+            // Add a new custom marker at the clicked location
+            customMarker = L.marker([lat, lng], { icon: customIcon }).addTo(map);
+            customMarker.bindPopup('Custom Location: Lat: ' + lat.toFixed(6) + ', Lon: ' + lng.toFixed(6)).openPopup();
+
+            // Deselect any previously selected marker
+            if (selectedMarker) {
+                selectedMarker.setIcon(defaultIcon);
+                selectedMarker = null;
+            }
+        });
+    } catch (error) {
+        console.error("Error initializing map:", error);
+    }
+
+    // Form Event Handlers and Validation
+    try {
+        // Toggle between map and manual input
+        var mapSelect = document.getElementById('mapSelect');
+        var manualSelect = document.getElementById('manualSelect');
+        if (mapSelect && manualSelect) {
+            mapSelect.addEventListener('change', function() {
+                document.getElementById('mapSection').style.display = 'block';
+                document.getElementById('manualSection').style.display = 'none';
+                document.getElementById('latitude').setAttribute('required', 'required');
+                document.getElementById('longitude').setAttribute('required', 'required');
+                document.getElementById('manual_lat').removeAttribute('required');
+                document.getElementById('manual_lon').removeAttribute('required');
+            });
+
+            manualSelect.addEventListener('change', function() {
+                document.getElementById('mapSection').style.display = 'none';
+                document.getElementById('manualSection').style.display = 'block';
+                document.getElementById('latitude').removeAttribute('required');
+                document.getElementById('longitude').removeAttribute('required');
+                document.getElementById('manual_lat').setAttribute('required', 'required');
+                document.getElementById('manual_lon').setAttribute('required', 'required');
+            });
+        } else {
+            console.error("Map or manual select radio buttons not found.");
+        }
+
+        // Toggle between dropdown and manual orientation
+        var dropdownOrientation = document.getElementById('dropdownOrientation');
+        var manualOrientation = document.getElementById('manualOrientation');
+        if (dropdownOrientation && manualOrientation) {
+            dropdownOrientation.addEventListener('change', function() {
+                document.getElementById('dropdownOrientationSection').style.display = 'block';
+                document.getElementById('manualOrientationSection').style.display = 'none';
+                document.getElementById('orientation').setAttribute('required', 'required');
+                document.getElementById('manual_orientation').removeAttribute('required');
+            });
+
+            manualOrientation.addEventListener('change', function() {
+                document.getElementById('dropdownOrientationSection').style.display = 'none';
+                document.getElementById('manualOrientationSection').style.display = 'block';
+                document.getElementById('orientation').removeAttribute('required');
+                document.getElementById('manual_orientation').setAttribute('required', 'required');
+            });
+        } else {
+            console.error("Orientation radio buttons not found.");
+        }
+
+        // Client-side form validation
+        var pvForm = document.getElementById('pvForm');
+        if (pvForm) {
+            pvForm.addEventListener('submit', function(event) {
+                var latSource = document.querySelector('input[name="lat_source"]:checked');
+                if (!latSource) {
+                    alert("Please select a location selection method.");
+                    event.preventDefault();
+                    return;
+                }
+                latSource = latSource.value;
+                if (latSource === 'map') {
+                    var lat = document.getElementById('latitude').value;
+                    var lon = document.getElementById('longitude').value;
+                    if (!lat || !lon) {
+                        alert("Please select a location on the map or via search before submitting.");
+                        event.preventDefault();
+                        return;
+                    }
+                    var latNum = parseFloat(lat);
+                    var lonNum = parseFloat(lon);
+                    if (latNum < 37.4 || latNum > 37.7 || lonNum < 126.8 || lonNum > 127.2) {
+                        alert("Selected location is outside Seoul bounds (Lat: 37.4 to 37.7, Lon: 126.8 to 127.2). Please select a location within Seoul.");
+                        event.preventDefault();
+                        return;
+                    }
+                } else if (latSource === 'manual') {
+                    var manualLat = document.getElementById('manual_lat').value;
+                    var manualLon = document.getElementById('manual_lon').value;
+                    if (!manualLat || !manualLon) {
+                        alert("Please enter valid latitude and longitude values.");
+                        event.preventDefault();
+                        return;
+                    }
+                    var latNum = parseFloat(manualLat);
+                    var lonNum = parseFloat(manualLon);
+                    if (latNum < 37.4 || latNum > 37.7 || lonNum < 126.8 || lonNum > 127.2) {
+                        alert("Latitude must be between 37.4 and 37.7, and longitude must be between 126.8 and 127.2.");
+                        event.preventDefault();
+                        return;
+                    }
+                }
+            });
+        } else {
+            console.error("Form element with id='pvForm' not found.");
+        }
+    } catch (error) {
+        console.error("Error initializing event handlers:", error);
+    }
+
+    // Plotly Charts
+    {% if current_results and forecast_results %}
+        try {
+            // Validate Plotly library
+            if (typeof Plotly === 'undefined') {
+                throw new Error("Plotly library failed to load.");
+            }
+
+            // GHI Plot
+            var current_timestamp = {{ current_timestamp | tojson | default('""') }};
+            var current_ghi = {{ current_ghi | tojson | default(0) }};
+            var timestamps = {{ timestamps | tojson | default('[]') }};
+            var ghi = {{ ghi | tojson | default('[]') }};
+
+            // Validate data
+            if (!current_timestamp || typeof current_ghi !== 'number') {
+                console.error("Invalid current GHI data:", { current_timestamp, current_ghi });
+                current_timestamp = "";
+                current_ghi = 0;
+            }
+            if (!Array.isArray(timestamps) || !Array.isArray(ghi) || timestamps.length !== ghi.length) {
+                console.error("Invalid forecast GHI data:", { timestamps, ghi });
+                timestamps = [];
+                ghi = [];
+            }
+
+            // Combine current and forecast data for proper ordering
+            var all_timestamps = [current_timestamp].concat(timestamps);
+            var all_ghi_current = [current_ghi].concat(new Array(timestamps.length).fill(null));
+            var all_ghi_forecast = [null].concat(ghi);
+
+            var trace1 = {
+                x: all_timestamps,
+                y: all_ghi_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current GHI (W/m²)',
+                marker: { color: '#FF5733', size: 10 }
+            };
+            var trace2 = {
+                x: all_timestamps,
+                y: all_ghi_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted GHI (W/m²)',
+                line: { color: '#FF5733', dash: 'dash' }
+            };
+
+            var layout1 = {
+                title: 'GHI (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'GHI (W/m²)',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('ghi_plot', [trace1, trace2], layout1);
+
+            // Pac Plot
+            var current_pac = {{ current_pac | tojson | default(0) }};
+            var pac = {{ pac | tojson | default('[]') }};
+
+            // Validate data
+            if (typeof current_pac !== 'number') {
+                console.error("Invalid current Pac data:", current_pac);
+                current_pac = 0;
+            }
+            if (!Array.isArray(pac)) {
+                console.error("Invalid forecast Pac data:", pac);
+                pac = [];
+            }
+
+            var all_pac_current = [current_pac].concat(new Array(timestamps.length).fill(null));
+            var all_pac_forecast = [null].concat(pac);
+
+            var trace3 = {
+                x: all_timestamps,
+                y: all_pac_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current Pac (W)',
+                marker: { color: '#3357FF', size: 10 }
+            };
+            var trace4 = {
+                x: all_timestamps,
+                y: all_pac_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted Pac (W)',
+                line: { color: '#3357FF', dash: 'dash' }
+            };
+
+            var layout2 = {
+                title: 'PV Power Output (Pac) (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'Pac (W)',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('pac_plot', [trace3, trace4], layout2);
+
+            // I-V Plot
+            var current_I = {{ current_I | tojson | default(0) }};
+            var current_V = {{ current_V | tojson | default(0) }};
+            var I = {{ I | tojson | default('[]') }};
+            var V = {{ V | tojson | default('[]') }};
+
+            // Validate data
+            if (typeof current_I !== 'number' || typeof current_V !== 'number') {
+                console.error("Invalid current I/V data:", { current_I, current_V });
+                current_I = 0;
+                current_V = 0;
+            }
+            if (!Array.isArray(I) || !Array.isArray(V)) {
+                console.error("Invalid forecast I/V data:", { I, V });
+                I = [];
+                V = [];
+            }
+
+            var all_I_current = [current_I].concat(new Array(timestamps.length).fill(null));
+            var all_V_current = [current_V].concat(new Array(timestamps.length).fill(null));
+            var all_I_forecast = [null].concat(I);
+            var all_V_forecast = [null].concat(V);
+
+            var trace5 = {
+                x: all_timestamps,
+                y: all_I_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current I (A)',
+                marker: { color: '#FF33A1', size: 10 }
+            };
+            var trace6 = {
+                x: all_timestamps,
+                y: all_V_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current V (V)',
+                marker: { color: '#33FFF5', size: 10 }
+            };
+            var trace7 = {
+                x: all_timestamps,
+                y: all_I_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted I (A)',
+                line: { color: '#FF33A1', dash: 'dash' }
+            };
+            var trace8 = {
+                x: all_timestamps,
+                y: all_V_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted V (V)',
+                line: { color: '#33FFF5', dash: 'dash' }
+            };
+
+            var layout3 = {
+                title: 'Current and Voltage at MPP (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'Value',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('iv_plot', [trace5, trace6, trace7, trace8], layout3);
+
+            // Loading Spinner
+            document.getElementById('pvForm').addEventListener('submit', function() {
+                document.getElementById('loadingSpinner').style.display = 'block';
+            });
+
+            // Enable Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        } catch (error) {
+            console.error("Error initializing charts:", error);
+            // Display a user-friendly message if plots fail to render
+            document.getElementById('ghi_plot').innerHTML = "<p class='text-danger'>Error rendering GHI plot. Please check the console for details.</p>";
+            document.getElementById('pac_plot').innerHTML = "<p class='text-danger'>Error rendering Pac plot. Please check the console for details.</p>";
+            document.getElementById('iv_plot').innerHTML = "<p class='text-danger'>Error rendering I-V plot. Please check the console for details.</p>";
+        }
+    {% endif %}
+});
+</script>
+</body>
+</html>
+
+
+
+Promptoa
+
+
+Custom locations clicked on the leaflet map the coordinates fetched from the map are inserted into 'Enter Coordinates Manually' I want the Select from Map work as i will click the coordinates 
+on the map and insert the options the script will also calclate the PV performance if the coordinates mismatch a little by some points as shown in the example below 
+it the suggested coordinates were automatically rounded as shown in the suggestion i mean the suggestion coordinates will be inserted auto matically when i click on the map 
+to calculate the pv performance . So please modify only required functions and do not show complete module code unless i task?
+
+
+
+37.55181614881821
+
+126.95388793945314
+
+Please enter a valid value. The two nearest valid values are 37.5518161448818 and 126.953887939453

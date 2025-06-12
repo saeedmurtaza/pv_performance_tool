@@ -1,0 +1,33 @@
+*.pyc
+__pycache__/
+*.log
+*.db
+*.csv
+nc_files/
+.env
+venv/
+.idea/
+vcpkg/
+# Exclude root-level non-project files
+../Data collection/
+../Python codes/
+../PV_forecasting.pptx
+../PV_forecasting_ver1.pptx
+../Raw.docx
+../Thesis submission/
+# Include only project files
+!.gitignore
+!.python-version
+!Procfile
+!requirements.txt
+!app.py
+!fetch_ghi_data.py
+!fetch_historical_weather_data.py
+!forecasted_temp.py
+!lnn_forecast.py
+!pv_models.py
+!data/
+!static/
+!templates/
+!trained_models/
+!preprocessed_data/

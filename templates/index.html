@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Performance Prediction Tool</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons (used in AdminLTE) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <!-- Plotly JS (Updated to version 2.35.2) -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        /* Ensure plots are responsive and fit within the card */
+        .card-body .plot-container {
+            width: 100%;
+            height: 400px;
+        }
+        .alert-dismissible .close {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0.75rem 1.25rem;
+            color: inherit;
+        }
+    </style>
+</head>
+<body class="hold-transition sidebar-mini">
+<div class="wrapper">
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-dark navbar-primary">
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="#">PV Performance Tool</a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Sidebar -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <a href="#" class="brand-link">
+            <span class="brand-text font-weight-light">PV Tool</span>
+        </a>
+        <div class="sidebar">
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link active">
+                            <i class="nav-icon fas fa-tachometer-alt"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">
+                            <i class="nav-icon fas fa-info-circle"></i>
+                            <p>About</p>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <!-- Content Header -->
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">PV Performance Prediction Tool for Seoul</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <section class="content">
+            <div class="container-fluid">
+                <!-- Error Message -->
+                {% if error %}
+                    <div class="alert alert-danger alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-exclamation-triangle"></i> Error!</h5>
+                        {{ error }}
+                    </div>
+                {% endif %}
+
+                <!-- Forecast Message -->
+                {% if forecast_message %}
+                    <div class="alert alert-info alert-dismissible">
+                        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                        <h5><i class="icon fas fa-info-circle"></i> Forecast Information</h5>
+                        {{ forecast_message }}
+                    </div>
+                {% endif %}
+
+                <!-- Input Form -->
+                <div class="card card-primary">
+                    <div class="card-header">
+                        <h3 class="card-title">Input Parameters</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" id="pvForm">
+                            <!-- Location Selection -->
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Location Selection Method:</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="lat_source" id="mapSelect" value="map" checked>
+                                        <label class="form-check-label" for="mapSelect">
+                                            Select from Map or Search
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="lat_source" id="manualSelect" value="manual">
+                                        <label class="form-check-label" for="manualSelect">
+                                            Enter Coordinates Manually
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Map Selection with Search -->
+                            <div id="mapSection">
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="locationSearch" class="form-label" data-bs-toggle="tooltip" title="Search for a location in Seoul by district (e.g., Jongno-gu, Myeongdong)">Search Location:</label>
+                                        <input type="text" id="locationSearch" class="form-control" placeholder="Search by district (e.g., Jongno-gu, Myeongdong)">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-12">
+                                        <label for="map" class="form-label" data-bs-toggle="tooltip" title="Click on the map or a marker to select a location in Seoul">Select Location on Map:</label>
+                                        <div id="map" style="height: 400px;"></div>
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="latitude" class="form-label">Selected Latitude:</label>
+                                        <input type="text" name="latitude" id="latitude" class="form-control" readonly required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="longitude" class="form-label">Selected Longitude:</label>
+                                        <input type="text" name="longitude" id="longitude" class="form-control" readonly required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Manual Coordinate Input -->
+                            <div id="manualSection" style="display: none;">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="manual_lat" class="form-label" data-bs-toggle="tooltip" title="Enter latitude between 37.4 and 37.7 (Seoul bounds), e.g., 37.4473684210526">Latitude (37.4 to 37.7):</label>
+                                        <input type="number" name="manual_lat" id="manual_lat" class="form-control" step="0.0000000000001" min="37.4" max="37.7" placeholder="e.g., 37.4473684210526" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="manual_lon" class="form-label" data-bs-toggle="tooltip" title="Enter longitude between 126.8 and 127.2 (Seoul bounds), e.g., 126.926315789474">Longitude (126.8 to 127.2):</label>
+                                        <input type="number" name="manual_lon" id="manual_lon" class="form-control" step="0.0000000000001" min="126.8" max="127.2" placeholder="e.g., 126.926315789474" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Inputs -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="pv_type" class="form-label" data-bs-toggle="tooltip" title="Type of PV module affecting efficiency">PV Type:</label>
+                                    <select name="pv_type" id="pv_type" class="form-control" required>
+                                        {% for pv_type in pv_types %}
+                                            <option value="{{ pv_type }}" {% if pv_type == selected_pv_type %}selected{% endif %}>{{ pv_type }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="area" class="form-label" data-bs-toggle="tooltip" title="Area of the PV panel in square meters">PV Area (m²):</label>
+                                    <input type="number" name="area" id="area" class="form-control" value="{{ selected_area if selected_area else 10 }}" step="0.1" min="0" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="tilt" class="form-label" data-bs-toggle="tooltip" title="Angle of the PV panel from the horizontal (0-90 degrees)">Tilt (degrees):</label>
+                                    <input type="number" name="tilt" id="tilt" class="form-control" value="{{ selected_tilt if selected_tilt else 30 }}" step="0.1" min="0" max="90" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Orientation Selection Method:</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="orientation_source" id="dropdownOrientation" value="dropdown" checked>
+                                        <label class="form-check-label" for="dropdownOrientation">
+                                            Select from Dropdown
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="orientation_source" id="manualOrientation" value="manual">
+                                        <label class="form-check-label" for="manualOrientation">
+                                            Enter Manually
+                                        </label>
+                                    </div>
+                                    <div id="dropdownOrientationSection">
+                                        <label for="orientation" class="form-label" data-bs-toggle="tooltip" title="Orientation of the PV panel (e.g., 0°=South, -90°=East, 90°=West, 180°=North)">Orientation:</label>
+                                        <select name="orientation" id="orientation" class="form-control" required>
+                                            {% for value, label in orientation_options %}
+                                                <option value="{{ value }}" {% if value == selected_orientation %}selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div id="manualOrientationSection" style="display: none;">
+                                        <label for="manual_orientation" class="form-label" data-bs-toggle="tooltip" title="Enter orientation in degrees (e.g., 0°=South, -90°=East, 90°=West, 180°=North)">Orientation (degrees):</label>
+                                        <input type="number" name="manual_orientation" id="manual_orientation" class="form-control" step="0.1" placeholder="e.g., 45">
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="model_type" class="form-label" data-bs-toggle="tooltip" title="SAM model for PV performance calculation">SAM Model:</label>
+                                    <select name="model_type" id="model_type" class="form-control" required>
+                                        {% for model in model_types %}
+                                            <option value="{{ model }}" {% if model == selected_model_type %}selected{% endif %}>{{ model.replace('_', ' ').title() }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12 mb-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">Calculate PV Performance</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="loadingSpinner" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Current Results -->
+                {% if current_results %}
+                    <div class="card card-info">
+                        <div class="card-header">
+                            <h3 class="card-title">Current PV Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>GHI (W/m²)</th>
+                                            <th>GTI (W/m²)</th>
+                                            <th>Pdc (W)</th>
+                                            <th>Pac (W)</th>
+                                            <th>I (A)</th>
+                                            <th>V (V)</th>
+                                            <th>Temperature (°C)</th>
+                                            <th>Wind Speed (m/s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{ current_results.timestamp }}</td>
+                                            <td>{{ current_results.ghi }}</td>
+                                            <td>{{ current_results.gti }}</td>
+                                            <td>{{ current_results.pdc }}</td>
+                                            <td>{{ current_results.pac }}</td>
+                                            <td>{{ current_results.I }}</td>
+                                            <td>{{ current_results.V }}</td>
+                                            <td>{{ current_results.temperature }}</td>
+                                            <td>{{ current_results.wind_speed }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Forecast Results -->
+                {% if forecast_results %}
+                    <div class="card card-success">
+                        <div class="card-header">
+                            <h3 class="card-title">Forecasted PV Performance</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>GHI (W/m²)</th>
+                                            <th>GTI (W/m²)</th>
+                                            <th>Pdc (W)</th>
+                                            <th>Pac (W)</th>
+                                            <th>I (A)</th>
+                                            <th>V (V)</th>
+                                            <th>Temperature (°C)</th>
+                                            <th>Wind Speed (m/s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in forecast_results %}
+                                            <tr>
+                                                <td>{{ result.timestamp }}</td>
+                                                <td>{{ result.ghi }}</td>
+                                                <td>{{ result.gti }}</td>
+                                                <td>{{ result.pdc }}</td>
+                                                <td>{{ result.pac }}</td>
+                                                <td>{{ result.I }}</td>
+                                                <td>{{ result.V }}</td>
+                                                <td>{{ result.temperature }}</td>
+                                                <td>{{ result.wind_speed }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IEC Metrics -->
+                    <div class="card card-warning">
+                        <div class="card-header">
+                            <h3 class="card-title">Aggregated Forecasted PV Performance and IEC Efficiency Metrics</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for key, value in iec_metrics.items() %}
+                                            <tr>
+                                                <td>{{ key }}</td>
+                                                <td>{{ value }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plots -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">GHI (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="ghi_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">PV Power Output (Pac) (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="pac_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-4">
+                            <div class="card card-info">
+                                <div class="card-header">
+                                    <h3 class="card-title">Current and Voltage at MPP (Current vs Forecasted)</h3>
+                                </div>
+                                <div class="card-body">
+                                    <div id="iv_plot" class="plot-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="float-right d-none d-sm-block">
+            <b>Version</b> 1.0.0
+        </div>
+        <strong>© 2025 PV Performance Prediction Tool. All rights reserved.</strong>
+    </footer>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+
+<!-- Define locations variable -->
+<script>
+    var locations = {{ location_options_with_labels | tojson | default('[]') }};
+    console.log("Locations data:", locations);
+</script>
+
+<!-- Main JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Map Initialization
+    try {
+        console.log('Map script loaded successfully');
+
+        // Verify Leaflet library loaded
+        if (typeof L === 'undefined') {
+            throw new Error("Leaflet library failed to load.");
+        }
+
+        // Verify map element exists
+        var mapElement = document.getElementById('map');
+        if (!mapElement) {
+            throw new Error("Map element with id='map' not found in the DOM.");
+        }
+
+        // Define icon configurations as separate variables
+        var defaultIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        var selectedIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        var customIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41]
+        });
+
+        // Initialize the map centered on Seoul
+        var map = L.map('map').setView([37.55, 127.0], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add markers for the locations from locations_eng.xlsx
+        var selectedMarker = null;
+        var markers = [];
+        var customMarker = null;
+
+        function updateMap(filteredLocations) {
+            // Clear existing markers except the custom marker
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            // Add new markers
+            filteredLocations.forEach(function(loc) {
+                if (!Array.isArray(loc) || loc.length < 3) {
+                    console.error("Invalid location data:", loc);
+                    return;
+                }
+                var marker = L.marker([loc[0], loc[1]], { icon: defaultIcon }).addTo(map);
+                marker.bindPopup(loc[2]);
+                marker.on('click', function() {
+                    document.getElementById('latitude').value = loc[0];
+                    document.getElementById('longitude').value = loc[1];
+
+                    if (selectedMarker) {
+                        selectedMarker.setIcon(defaultIcon);
+                    }
+                    marker.setIcon(selectedIcon);
+                    selectedMarker = marker;
+
+                    // Remove custom marker if it exists
+                    if (customMarker) {
+                        map.removeLayer(customMarker);
+                        customMarker = null;
+                    }
+                });
+                markers.push(marker);
+            });
+        }
+
+        // Initial map population
+        if (locations && locations.length > 0) {
+            updateMap(locations);
+            // Set default selection to the first location
+            var latInput = document.getElementById('latitude');
+            var lonInput = document.getElementById('longitude');
+            if (latInput && lonInput) {
+                latInput.value = locations[0][0];
+                lonInput.value = locations[0][1];
+                markers[0].setIcon(selectedIcon);
+                selectedMarker = markers[0];
+            } else {
+                console.error("Latitude or longitude input elements not found.");
+            }
+        } else {
+            console.error("No locations available to display on the map.");
+        }
+
+        // Search functionality
+        var locationSearch = document.getElementById('locationSearch');
+        if (locationSearch) {
+            locationSearch.addEventListener('input', function(e) {
+                var searchValue = e.target.value.toLowerCase();
+                var filteredLocations = locations.filter(function(loc) {
+                    return loc[2].toLowerCase().includes(searchValue);
+                });
+                updateMap(filteredLocations);
+            });
+        } else {
+            console.error("Location search input element not found.");
+        }
+
+        // Map click event to select a custom location
+        // Map click event to select a custom location with rounding
+		map.on('click', function(e) {
+			let lat = e.latlng.lat;
+			let lng = e.latlng.lng;
+
+			// Validate within Seoul bounds
+			if (lat < 37.4 || lat > 37.7 || lng < 126.8 || lng > 127.2) {
+				alert("Selected location is outside Seoul bounds (Lat: 37.4 to 37.7, Lon: 126.8 to 127.2).");
+				return;
+			}
+
+			// Round to nearest 20x20 grid point as used in backend
+			const roundToNearest = (value, gridArray) => {
+				return gridArray.reduce((prev, curr) => Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev);
+			};
+
+			const latGrid = Array.from({length: 20}, (_, i) => 37.4 + (i * (0.3 / 19)));
+			const lonGrid = Array.from({length: 20}, (_, i) => 126.8 + (i * (0.4 / 19)));
+
+			const roundedLat = roundToNearest(lat, latGrid);
+			const roundedLon = roundToNearest(lng, lonGrid);
+
+			// Insert into map input fields (used in form)
+			const latInput = document.getElementById('latitude');
+			const lonInput = document.getElementById('longitude');
+			if (latInput && lonInput) {
+				latInput.value = roundedLat.toFixed(10);
+				lonInput.value = roundedLon.toFixed(10);
+			}
+
+			// Add custom marker
+			if (customMarker) {
+				map.removeLayer(customMarker);
+			}
+			customMarker = L.marker([roundedLat, roundedLon], { icon: customIcon }).addTo(map);
+			customMarker.bindPopup(`Rounded Location:<br>Lat: ${roundedLat.toFixed(10)}<br>Lon: ${roundedLon.toFixed(10)}`).openPopup();
+
+			if (selectedMarker) {
+				selectedMarker.setIcon(defaultIcon);
+				selectedMarker = null;
+			}
+			
+			// Auto-switch to "Select from Map" mode and trigger change event
+			const mapSelect = document.getElementById('mapSelect');
+			mapSelect.checked = true;
+			mapSelect.dispatchEvent(new Event('change'));  // <== This is what was missing!
+
+		});
+
+    } catch (error) {
+        console.error("Error initializing map:", error);
+    }
+
+    // Form Event Handlers and Validation
+    try {
+        // Toggle between map and manual input
+        var mapSelect = document.getElementById('mapSelect');
+        var manualSelect = document.getElementById('manualSelect');
+        if (mapSelect && manualSelect) {
+            mapSelect.addEventListener('change', function() {
+                document.getElementById('mapSection').style.display = 'block';
+                document.getElementById('manualSection').style.display = 'none';
+                document.getElementById('latitude').setAttribute('required', 'required');
+                document.getElementById('longitude').setAttribute('required', 'required');
+                document.getElementById('manual_lat').removeAttribute('required');
+                document.getElementById('manual_lon').removeAttribute('required');
+            });
+
+            manualSelect.addEventListener('change', function() {
+                document.getElementById('mapSection').style.display = 'none';
+                document.getElementById('manualSection').style.display = 'block';
+                document.getElementById('latitude').removeAttribute('required');
+                document.getElementById('longitude').removeAttribute('required');
+                document.getElementById('manual_lat').setAttribute('required', 'required');
+                document.getElementById('manual_lon').setAttribute('required', 'required');
+            });
+        } else {
+            console.error("Map or manual select radio buttons not found.");
+        }
+
+        // Toggle between dropdown and manual orientation
+        var dropdownOrientation = document.getElementById('dropdownOrientation');
+        var manualOrientation = document.getElementById('manualOrientation');
+        if (dropdownOrientation && manualOrientation) {
+            dropdownOrientation.addEventListener('change', function() {
+                document.getElementById('dropdownOrientationSection').style.display = 'block';
+                document.getElementById('manualOrientationSection').style.display = 'none';
+                document.getElementById('orientation').setAttribute('required', 'required');
+                document.getElementById('manual_orientation').removeAttribute('required');
+            });
+
+            manualOrientation.addEventListener('change', function() {
+                document.getElementById('dropdownOrientationSection').style.display = 'none';
+                document.getElementById('manualOrientationSection').style.display = 'block';
+                document.getElementById('orientation').removeAttribute('required');
+                document.getElementById('manual_orientation').setAttribute('required', 'required');
+            });
+        } else {
+            console.error("Orientation radio buttons not found.");
+        }
+
+        // Client-side form validation
+        var pvForm = document.getElementById('pvForm');
+        if (pvForm) {
+            pvForm.addEventListener('submit', function(event) {
+                var latSource = document.querySelector('input[name="lat_source"]:checked');
+                if (!latSource) {
+                    alert("Please select a location selection method.");
+                    event.preventDefault();
+                    return;
+                }
+                latSource = latSource.value;
+                if (latSource === 'map') {
+                    var lat = document.getElementById('latitude').value;
+                    var lon = document.getElementById('longitude').value;
+                    if (!lat || !lon) {
+                        alert("Please select a location on the map or via search before submitting.");
+                        event.preventDefault();
+                        return;
+                    }
+                    var latNum = parseFloat(lat);
+                    var lonNum = parseFloat(lon);
+                    if (latNum < 37.4 || latNum > 37.7 || lonNum < 126.8 || lonNum > 127.2) {
+                        alert("Selected location is outside Seoul bounds (Lat: 37.4 to 37.7, Lon: 126.8 to 127.2). Please select a location within Seoul.");
+                        event.preventDefault();
+                        return;
+                    }
+					
+					// Auto-switch to "Select from Map" mode
+					document.getElementById('mapSelect').checked = true;
+					document.getElementById('mapSection').style.display = 'block';
+					document.getElementById('manualSection').style.display = 'none';
+
+					
+                } else if (latSource === 'manual') {
+                    var manualLat = document.getElementById('manual_lat').value;
+                    var manualLon = document.getElementById('manual_lon').value;
+                    if (!manualLat || !manualLon) {
+                        alert("Please enter valid latitude and longitude values.");
+                        event.preventDefault();
+                        return;
+                    }
+                    var latNum = parseFloat(manualLat);
+                    var lonNum = parseFloat(manualLon);
+                    if (latNum < 37.4 || latNum > 37.7 || lonNum < 126.8 || lonNum > 127.2) {
+                        alert("Latitude must be between 37.4 and 37.7, and longitude must be between 126.8 and 127.2.");
+                        event.preventDefault();
+                        return;
+                    }
+                }
+            });
+        } else {
+            console.error("Form element with id='pvForm' not found.");
+        }
+    } catch (error) {
+        console.error("Error initializing event handlers:", error);
+    }
+
+    // Plotly Charts
+    {% if current_results and forecast_results %}
+        try {
+            // Validate Plotly library
+            if (typeof Plotly === 'undefined') {
+                throw new Error("Plotly library failed to load.");
+            }
+
+            // GHI Plot
+            var current_timestamp = {{ current_timestamp | tojson | default('""') }};
+            var current_ghi = {{ current_ghi | tojson | default(0) }};
+            var timestamps = {{ timestamps | tojson | default('[]') }};
+            var ghi = {{ ghi | tojson | default('[]') }};
+
+            // Validate data
+            if (!current_timestamp || typeof current_ghi !== 'number') {
+                console.error("Invalid current GHI data:", { current_timestamp, current_ghi });
+                current_timestamp = "";
+                current_ghi = 0;
+            }
+            if (!Array.isArray(timestamps) || !Array.isArray(ghi) || timestamps.length !== ghi.length) {
+                console.error("Invalid forecast GHI data:", { timestamps, ghi });
+                timestamps = [];
+                ghi = [];
+            }
+
+            // Combine current and forecast data for proper ordering
+            var all_timestamps = [current_timestamp].concat(timestamps);
+            var all_ghi_current = [current_ghi].concat(new Array(timestamps.length).fill(null));
+            var all_ghi_forecast = [null].concat(ghi);
+
+            var trace1 = {
+                x: all_timestamps,
+                y: all_ghi_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current GHI (W/m²)',
+                marker: { color: '#FF5733', size: 10 }
+            };
+            var trace2 = {
+                x: all_timestamps,
+                y: all_ghi_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted GHI (W/m²)',
+                line: { color: '#FF5733', dash: 'dash' }
+            };
+
+            var layout1 = {
+                title: 'GHI (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'GHI (W/m²)',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('ghi_plot', [trace1, trace2], layout1);
+
+            // Pac Plot
+            var current_pac = {{ current_pac | tojson | default(0) }};
+            var pac = {{ pac | tojson | default('[]') }};
+
+            // Validate data
+            if (typeof current_pac !== 'number') {
+                console.error("Invalid current Pac data:", current_pac);
+                current_pac = 0;
+            }
+            if (!Array.isArray(pac)) {
+                console.error("Invalid forecast Pac data:", pac);
+                pac = [];
+            }
+
+            var all_pac_current = [current_pac].concat(new Array(timestamps.length).fill(null));
+            var all_pac_forecast = [null].concat(pac);
+
+            var trace3 = {
+                x: all_timestamps,
+                y: all_pac_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current Pac (W)',
+                marker: { color: '#3357FF', size: 10 }
+            };
+            var trace4 = {
+                x: all_timestamps,
+                y: all_pac_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted Pac (W)',
+                line: { color: '#3357FF', dash: 'dash' }
+            };
+
+            var layout2 = {
+                title: 'PV Power Output (Pac) (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'Pac (W)',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('pac_plot', [trace3, trace4], layout2);
+
+            // I-V Plot
+            var current_I = {{ current_I | tojson | default(0) }};
+            var current_V = {{ current_V | tojson | default(0) }};
+            var I = {{ I | tojson | default('[]') }};
+            var V = {{ V | tojson | default('[]') }};
+
+            // Validate data
+            if (typeof current_I !== 'number' || typeof current_V !== 'number') {
+                console.error("Invalid current I/V data:", { current_I, current_V });
+                current_I = 0;
+                current_V = 0;
+            }
+            if (!Array.isArray(I) || !Array.isArray(V)) {
+                console.error("Invalid forecast I/V data:", { I, V });
+                I = [];
+                V = [];
+            }
+
+            var all_I_current = [current_I].concat(new Array(timestamps.length).fill(null));
+            var all_V_current = [current_V].concat(new Array(timestamps.length).fill(null));
+            var all_I_forecast = [null].concat(I);
+            var all_V_forecast = [null].concat(V);
+
+            var trace5 = {
+                x: all_timestamps,
+                y: all_I_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current I (A)',
+                marker: { color: '#FF33A1', size: 10 }
+            };
+            var trace6 = {
+                x: all_timestamps,
+                y: all_V_current,
+                type: 'scatter',
+                mode: 'markers',
+                name: 'Current V (V)',
+                marker: { color: '#33FFF5', size: 10 }
+            };
+            var trace7 = {
+                x: all_timestamps,
+                y: all_I_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted I (A)',
+                line: { color: '#FF33A1', dash: 'dash' }
+            };
+            var trace8 = {
+                x: all_timestamps,
+                y: all_V_forecast,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Forecasted V (V)',
+                line: { color: '#33FFF5', dash: 'dash' }
+            };
+
+            var layout3 = {
+                title: 'Current and Voltage at MPP (Current vs Forecasted)',
+                xaxis: { 
+                    type: 'date',
+                    title: 'Timestamp',
+                    tickformat: '%H:%M',
+                    tickvals: all_timestamps,
+                    ticktext: all_timestamps.map(ts => new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })),
+                    range: [current_timestamp, timestamps[timestamps.length - 1]],
+                    tickangle: 45,
+                    automargin: true
+                },
+                yaxis: { 
+                    title: 'Value',
+                    rangemode: 'tozero'
+                },
+                legend: { x: 0, y: 1.2 },
+                showlegend: true,
+                margin: { t: 50, b: 100 },
+                responsive: true
+            };
+
+            Plotly.newPlot('iv_plot', [trace5, trace6, trace7, trace8], layout3);
+
+            // Loading Spinner
+            document.getElementById('pvForm').addEventListener('submit', function() {
+                document.getElementById('loadingSpinner').style.display = 'block';
+            });
+
+            // Enable Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        } catch (error) {
+            console.error("Error initializing charts:", error);
+            // Display a user-friendly message if plots fail to render
+            document.getElementById('ghi_plot').innerHTML = "<p class='text-danger'>Error rendering GHI plot. Please check the console for details.</p>";
+            document.getElementById('pac_plot').innerHTML = "<p class='text-danger'>Error rendering Pac plot. Please check the console for details.</p>";
+            document.getElementById('iv_plot').innerHTML = "<p class='text-danger'>Error rendering I-V plot. Please check the console for details.</p>";
+        }
+    {% endif %}
+});
+
+// Autocomplete location search using JSON
+fetch('{{ url_for("static", filename="json/seoul_autocomplete_locations.json") }}')
+    .then(response => response.json())
+    .then(locations => {
+        const datalist = document.createElement('datalist');
+        datalist.id = 'locationSuggestions';
+        document.body.appendChild(datalist);
+
+        const searchInput = document.getElementById('locationSearch');
+        searchInput.setAttribute('list', 'locationSuggestions');
+
+        locations.forEach(loc => {
+            const option = document.createElement('option');
+            option.value = loc.name;
+            option.setAttribute('data-lat', loc.lat);
+            option.setAttribute('data-lon', loc.lon);
+            datalist.appendChild(option);
+        });
+
+        searchInput.addEventListener('input', function () {
+            const selected = [...datalist.options].find(option => option.value === this.value);
+            if (selected) {
+                const lat = parseFloat(selected.getAttribute('data-lat'));
+                const lon = parseFloat(selected.getAttribute('data-lon'));
+
+                document.getElementById('latitude').value = lat.toFixed(10);
+                document.getElementById('longitude').value = lon.toFixed(10);
+
+                if (typeof L !== 'undefined' && map) {
+                    if (typeof customMarker !== 'undefined' && customMarker) {
+                        map.removeLayer(customMarker);
+                    }
+                    customMarker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+                    customMarker.bindPopup(`${this.value}<br>Lat: ${lat.toFixed(10)}<br>Lon: ${lon.toFixed(10)}`).openPopup();
+
+                    if (typeof selectedMarker !== 'undefined' && selectedMarker) {
+                        selectedMarker.setIcon(defaultIcon);
+                        selectedMarker = null;
+                    }
+
+                    map.setView([lat, lon], 14);  // Optional: Zoom to selected location
+                }
+            }
+        });
+    })
+    .catch(err => {
+        console.error("Failed to load autocomplete locations:", err);
+    });
+
+</script>
+</body>
+</html>
