@@ -30,4 +30,6 @@ vcpkg/
 !static/
 !templates/
 !trained_models/
-!preprocessed_data/
+!preprocessed_data/data/nc_files/ 
+requirements - Copy.txt 
+requirements - Copy.txt 
