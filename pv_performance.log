@@ -1,0 +1,38 @@
+2025-06-13 14:19:11,251 - ERROR - Failed to fetch historical data: Cannot subtract tz-naive and tz-aware datetime-like objects.
+2025-06-13 14:19:11,252 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:19:11,276 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:19:23,402 - ERROR - Failed to fetch historical data: Cannot subtract tz-naive and tz-aware datetime-like objects.
+2025-06-13 14:19:23,402 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:19:23,426 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:50:40,856 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:50:40,858 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:50:40,862 - WARNING - No historical data found at exact coordinates (37.4, 127.15789473684211). Searching for nearest location.
+2025-06-13 14:50:40,911 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:56:21,013 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:56:21,014 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:56:21,017 - WARNING - No historical data found at exact coordinates (37.4, 127.15789473684211). Searching for nearest location.
+2025-06-13 14:56:21,065 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:57:05,748 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:57:05,748 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:57:05,751 - WARNING - No historical data found at exact coordinates (37.51052631578948, 127.03157894736842). Searching for nearest location.
+2025-06-13 14:57:05,785 - ERROR - Error calculating current PV performance: cannot access local variable 'dI_dV' where it is not associated with a value
+2025-06-13 14:57:24,190 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:57:24,191 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:57:24,193 - WARNING - No historical data found at exact coordinates (37.51052631578948, 127.03157894736842). Searching for nearest location.
+2025-06-13 14:57:24,227 - ERROR - Error calculating current PV performance: cannot access local variable 'dI_dV' where it is not associated with a value
+2025-06-13 14:57:36,458 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:57:36,458 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:57:36,460 - WARNING - No historical data found at exact coordinates (37.54210526315789, 126.98947368421052). Searching for nearest location.
+2025-06-13 14:57:36,509 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:57:48,861 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:57:48,862 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:57:48,865 - WARNING - No historical data found at exact coordinates (37.589473684210525, 126.96842105263158). Searching for nearest location.
+2025-06-13 14:57:48,916 - ERROR - Error storing daily IEC metrics: 'Yr'
+2025-06-13 14:57:57,807 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-13 14:57:57,807 - WARNING - No historical data available. Attempting nearest data.
+2025-06-13 14:57:57,810 - WARNING - No historical data found at exact coordinates (37.55789473684211, 126.96842105263158). Searching for nearest location.
+2025-06-13 14:57:57,846 - ERROR - Error calculating current PV performance: cannot access local variable 'dI_dV' where it is not associated with a value
+2025-06-14 01:16:46,060 - ERROR - Failed to fetch historical data: No historical data available for the specified location and time range.
+2025-06-14 01:16:46,060 - WARNING - No historical data available. Attempting nearest data.
+2025-06-14 01:16:46,061 - WARNING - No historical data found at exact coordinates (37.526315789473685, 127.03157894736842). Searching for nearest location.
+2025-06-14 01:16:46,115 - ERROR - Error storing daily IEC metrics: 'Yr'
