@@ -1,2 +1,0 @@
-timesteps: 9
-n_features: 15
