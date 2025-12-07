@@ -23,7 +23,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
 # KMA API setup (historical data)
 kma_auth_key = os.getenv("KMA_AUTH_KEY", "LoBU7l_-QDuAVO5f_iA7ZQ")
 kma_historical_base_url = "https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-sfc_obs_nc_pt_api"
@@ -31,25 +30,39 @@ kma_historical_base_url = "https://apihub.kma.go.kr/api/typ01/cgi-bin/url/nph-sf
 # Database setup
 db_path = os.path.join(os.path.dirname(__file__), 'data', 'weather_data.db')
 
-
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
 # Create table for historical data
 try:
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS weather_data (
-            timestamp TEXT,
-            nx INTEGER,
-            ny INTEGER,
-            lat REAL,
-            lon REAL,
-            temperature REAL,
-            wind_speed REAL,
-            data_type TEXT,
-            UNIQUE(timestamp, nx, ny, data_type)
-        )
-    ''')
+                   CREATE TABLE IF NOT EXISTS weather_data
+                   (
+                       timestamp
+                       TEXT,
+                       nx
+                       INTEGER,
+                       ny
+                       INTEGER,
+                       lat
+                       REAL,
+                       lon
+                       REAL,
+                       temperature
+                       REAL,
+                       wind_speed
+                       REAL,
+                       data_type
+                       TEXT,
+                       UNIQUE
+                   (
+                       timestamp,
+                       nx,
+                       ny,
+                       data_type
+                   )
+                       )
+                   ''')
     conn.commit()
     logger.info("Ensured weather_data table exists.")
 except Exception as e:
@@ -60,16 +73,19 @@ except Exception as e:
 open_meteo_requests = 0
 OPEN_METEO_DAILY_LIMIT = 9500  # Cap at 9500 to leave a buffer (limit is 10,000)
 
+
 def reset_request_counter():
     """Reset the Open-Meteo request counter daily."""
     global open_meteo_requests
     open_meteo_requests = 0
     logger.info("Reset Open-Meteo request counter for the day.")
 
+
 # Function to get the current row count
 def get_row_count(table_name, data_type):
     cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE data_type = ?", (data_type,))
     return cursor.fetchone()[0]
+
 
 # Generate 20x20 grid for Seoul (lat: 37.4–37.7, lon: 126.8–127.2)
 coords = [(lat, lon) for lat in np.linspace(37.4, 37.7, 20) for lon in np.linspace(126.8, 127.2, 20)]
@@ -79,6 +95,7 @@ locations_df['ny'] = locations_df.index % 20
 
 # KST timezone
 KST = timezone(timedelta(hours=9))
+
 
 # Historical Data Fetching Functions
 def fetch_point_data(lat, lon, start_time, end_time, max_retries=3):
@@ -102,16 +119,20 @@ def fetch_point_data(lat, lon, start_time, end_time, max_retries=3):
                 logger.debug(f"Response content: {response.text}")
                 return response.text
             elif response.status_code == 404:
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} - Data not available for lat={lat}, lon={lon}, {tm1} to {tm2} (404)")
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} - Data not available for lat={lat}, lon={lon}, {tm1} to {tm2} (404)")
                 return None
             else:
-                logger.warning(f"Attempt {attempt + 1}/{max_retries} - Failed to fetch data for lat={lat}, lon={lon}, {tm1} to {tm2}, Status: {response.status_code}")
+                logger.warning(
+                    f"Attempt {attempt + 1}/{max_retries} - Failed to fetch data for lat={lat}, lon={lon}, {tm1} to {tm2}, Status: {response.status_code}")
         except requests.exceptions.RequestException as e:
-            logger.error(f"Attempt {attempt + 1}/{max_retries} - Error fetching data for lat={lat}, lon={lon}, {tm1} to {tm2}: {str(e)}")
+            logger.error(
+                f"Attempt {attempt + 1}/{max_retries} - Error fetching data for lat={lat}, lon={lon}, {tm1} to {tm2}: {str(e)}")
         if attempt < max_retries - 1:
             time.sleep(5 * (2 ** attempt))
     logger.error(f"All {max_retries} retries failed for lat={lat}, lon={lon}, {tm1} to {tm2}")
     return None
+
 
 def parse_point_data(response_text):
     """Parse the point-based API response to extract temperature values at 10-minute intervals."""
@@ -144,6 +165,7 @@ def parse_point_data(response_text):
         logger.error(f"Error parsing point data: {str(e)}")
         return []
 
+
 def fetch_nearest_data(lat, lon, start_time, end_time, all_coords, max_retries=3):
     """Fetch data for the nearest coordinate if the original location has missing data."""
     coords = all_coords[['lat', 'lon']].values
@@ -156,11 +178,13 @@ def fetch_nearest_data(lat, lon, start_time, end_time, all_coords, max_retries=3
             nearest_lat, nearest_lon = coords[indices[1]]
         else:
             return None
-    logger.info(f"Fetching historical data for nearest coordinate (lat={nearest_lat}, lon={nearest_lon}) for time range {start_time} to {end_time}")
+    logger.info(
+        f"Fetching historical data for nearest coordinate (lat={nearest_lat}, lon={nearest_lon}) for time range {start_time} to {end_time}")
     response_text = fetch_point_data(nearest_lat, nearest_lon, start_time, end_time, max_retries)
     if response_text:
         return parse_point_data(response_text)
     return None
+
 
 def interpolate_to_30min(data_points, start_time, end_time):
     """Interpolate 10-minute interval data to 30-minute intervals."""
@@ -183,16 +207,20 @@ def interpolate_to_30min(data_points, start_time, end_time):
         })
     return interpolated_data
 
+
 def interpolate_historical(lat, lon, start_time, end_time, conn, time_window_hours=4):
     """Interpolate missing historical data using stored data for the same location."""
     logger.info(f"Attempting historical interpolation for lat={lat}, lon={lon}, from {start_time} to {end_time}")
     query = """
-        SELECT timestamp, temperature
-        FROM weather_data
-        WHERE lat = ? AND lon = ? AND data_type = 'historical'
-        AND timestamp BETWEEN ? AND ?
-        ORDER BY timestamp
-    """
+            SELECT timestamp, temperature
+            FROM weather_data
+            WHERE lat = ? \
+              AND lon = ? \
+              AND data_type = 'historical'
+              AND timestamp BETWEEN ? \
+              AND ?
+            ORDER BY timestamp \
+            """
     try:
         df = pd.read_sql_query(
             query, conn,
@@ -201,7 +229,8 @@ def interpolate_historical(lat, lon, start_time, end_time, conn, time_window_hou
                     (end_time + timedelta(hours=time_window_hours)).strftime("%Y-%m-%d %H:%M:%S"))
         )
         if len(df) < 2:
-            logger.warning(f"Insufficient data for historical interpolation at lat={lat}, lon={lon}, from {start_time} to {end_time}")
+            logger.warning(
+                f"Insufficient data for historical interpolation at lat={lat}, lon={lon}, from {start_time} to {end_time}")
             return None
         df['timestamp'] = pd.to_datetime(df['timestamp']).dt.tz_localize(KST)
         df.set_index('timestamp', inplace=True)
@@ -211,7 +240,8 @@ def interpolate_historical(lat, lon, start_time, end_time, conn, time_window_hou
         for dt, row in df_30min.iterrows():
             temperature = row['temperature']
             if not (-20 <= temperature <= 50):
-                logger.warning(f"Invalid interpolated temperature value {temperature} at lat={lat}, lon={lon}, timestamp={dt}")
+                logger.warning(
+                    f"Invalid interpolated temperature value {temperature} at lat={lat}, lon={lon}, timestamp={dt}")
                 continue
             interpolated_data.append({
                 'datetime': dt.strftime('%Y-%m-%d %H:%M:%S'),
@@ -223,6 +253,7 @@ def interpolate_historical(lat, lon, start_time, end_time, conn, time_window_hou
         logger.error(f"Error during historical interpolation: {str(e)}")
         return None
 
+
 # Open-Meteo Fallback for Historical Data
 def fetch_open_meteo_data(locations, start_time, end_time, include_wind_speed=False):
     """Fetch historical data from Open-Meteo for multiple locations."""
@@ -230,10 +261,12 @@ def fetch_open_meteo_data(locations, start_time, end_time, include_wind_speed=Fa
     all_data_points = []
     for lat, lon in locations:
         if open_meteo_requests >= OPEN_METEO_DAILY_LIMIT:
-            logger.warning(f"Approaching Open-Meteo daily limit ({open_meteo_requests}/{OPEN_METEO_DAILY_LIMIT}). Skipping request for lat={lat}, lon={lon}.")
+            logger.warning(
+                f"Approaching Open-Meteo daily limit ({open_meteo_requests}/{OPEN_METEO_DAILY_LIMIT}). Skipping request for lat={lat}, lon={lon}.")
             all_data_points.append((lat, lon, None))
             continue
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m" + (",wind_speed_10m" if include_wind_speed else "")
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m" + (
+            ",wind_speed_10m" if include_wind_speed else "")
         url += f"&start_date={start_time.strftime('%Y-%m-%d')}&end_date={end_time.strftime('%Y-%m-%d')}"
         try:
             response = requests.get(url, timeout=30)
@@ -242,7 +275,8 @@ def fetch_open_meteo_data(locations, start_time, end_time, include_wind_speed=Fa
                 data = response.json()
                 timestamps = pd.to_datetime(data['hourly']['time']).tz_localize(KST)
                 temperatures = data['hourly']['temperature_2m']
-                winds = data['hourly'].get('wind_speed_10m', [None] * len(timestamps)) if include_wind_speed else [None] * len(timestamps)
+                winds = data['hourly'].get('wind_speed_10m',
+                                           [None] * len(timestamps)) if include_wind_speed else [None] * len(timestamps)
                 data_points = []
                 for ts, temp, wind in zip(timestamps, temperatures, winds):
                     if start_time <= ts <= end_time:
@@ -253,7 +287,8 @@ def fetch_open_meteo_data(locations, start_time, end_time, include_wind_speed=Fa
                         if include_wind_speed:
                             wind_ms = wind / 3.6  # Convert km/h to m/s
                             if not (0 <= wind_ms <= 50):
-                                logger.warning(f"Invalid wind speed value {wind_ms} at lat={lat}, lon={lon}, timestamp={ts}")
+                                logger.warning(
+                                    f"Invalid wind speed value {wind_ms} at lat={lat}, lon={lon}, timestamp={ts}")
                                 continue
                             data_point['wind_speed'] = wind_ms
                         data_points.append(data_point)
@@ -267,6 +302,7 @@ def fetch_open_meteo_data(locations, start_time, end_time, include_wind_speed=Fa
             all_data_points.append((lat, lon, None))
         time.sleep(0.1)  # Small delay to avoid rate limiting
     return all_data_points
+
 
 # Fetch Function for Historical Data
 def fetch_historical_data(now):
@@ -289,7 +325,8 @@ def fetch_historical_data(now):
     for batch_start in range(0, total_locations, historical_batch_size):
         batch_end = min(batch_start + historical_batch_size, total_locations)
         batch_df = locations_df.iloc[batch_start:batch_end]
-        logger.info(f"Processing historical batch {batch_start // historical_batch_size + 1}/{(total_locations - 1) // historical_batch_size + 1} (points {batch_start} to {batch_end - 1})")
+        logger.info(
+            f"Processing historical batch {batch_start // historical_batch_size + 1}/{(total_locations - 1) // historical_batch_size + 1} (points {batch_start} to {batch_end - 1})")
         for idx, row in batch_df.iterrows():
             lat, lon, nx, ny = row['lat'], row['lon'], row['nx'], row['ny']
             # Fetch from KMA API
@@ -318,12 +355,15 @@ def fetch_historical_data(now):
             if not data_points:
                 om_data = fetch_open_meteo_data([(lat, lon)], start_time_hist, end_time_hist, include_wind_speed=False)
                 if om_data and om_data[0][2]:
-                    data_points = [{'datetime': dp['forecast_time'], 'temperature': dp['temperature']} for dp in om_data[0][2]]
-                    logger.info(f"Fetched Open-Meteo data points for lat={lat}, lon={lon}: {len(data_points)} timesteps")
+                    data_points = [{'datetime': dp['forecast_time'], 'temperature': dp['temperature']} for dp in
+                                   om_data[0][2]]
+                    logger.info(
+                        f"Fetched Open-Meteo data points for lat={lat}, lon={lon}: {len(data_points)} timesteps")
                 else:
                     logger.warning(f"No Open-Meteo data available for lat={lat}, lon={lon}")
             if not data_points:
-                logger.error(f"No historical data available for lat={lat}, lon={lon} from {start_time_hist} to {end_time_hist}")
+                logger.error(
+                    f"No historical data available for lat={lat}, lon={lon} from {start_time_hist} to {end_time_hist}")
                 skipped_timestamps += len(historical_timestamps)
                 continue
             interpolated_data = interpolate_to_30min(data_points, start_time_hist, end_time_hist)
@@ -354,11 +394,17 @@ def fetch_historical_data(now):
         nx, ny = row["nx"], row["ny"]
         cutoff = (now - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
-            DELETE FROM weather_data
-            WHERE nx = ? AND ny = ? AND timestamp < ? AND data_type = 'historical'
-        """, (nx, ny, cutoff))
+                       DELETE
+                       FROM weather_data
+                       WHERE nx = ?
+                         AND ny = ?
+                         AND timestamp
+                           < ?
+                         AND data_type = 'historical'
+                       """, (nx, ny, cutoff))
     conn.commit()
     logger.info(f"Cleaned up historical data, keeping data after {cutoff}")
+
 
 # Main Fetching Function
 def fetch_and_store_historical_weather_data():
@@ -428,6 +474,7 @@ def fetch_and_store_historical_weather_data():
         else:
             logger.info("No sleep needed, proceeding to next iteration immediately.")
 
+
 if __name__ == "__main__":
     try:
         fetch_and_store_historical_weather_data()
@@ -437,3 +484,4 @@ if __name__ == "__main__":
         logger.error(f"Unexpected error: {str(e)}")
     finally:
         conn.close()
+

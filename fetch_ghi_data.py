@@ -1,5 +1,5 @@
-import os
 import requests
+import os
 import netCDF4 as nc
 import numpy as np
 from datetime import datetime, timedelta
@@ -9,10 +9,7 @@ import pyproj
 import time
 import logging
 from pyproj import Transformer
-from b2sdk.v1 import B2Api, InMemoryAccountInfo
-from b2sdk.exception import B2Error
 
-# Set up logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(
     level=logging.INFO,
@@ -23,24 +20,8 @@ logging.basicConfig(
     ]
 )
 
-# Backblaze B2 credentials (set as environment variables in Heroku)
-APPLICATION_KEY_ID = os.environ.get('B2_APPLICATION_KEY_ID', "004ba3eab8b5e440000000001")
-APPLICATION_KEY = os.environ.get('B2_APPLICATION_KEY', "K004D2pavneAmHVb3ql+JBxcH/69DWk")
-BUCKET_NAME = os.environ.get('B2_BUCKET_NAME', "pv-performance-tool-data-saeed")
-
-# Initialize B2 API
-try:
-    info = InMemoryAccountInfo()
-    b2_api = B2Api(info)
-    b2_api.authorize_account("production", APPLICATION_KEY_ID, APPLICATION_KEY)
-    bucket = b2_api.get_bucket_by_name(BUCKET_NAME)
-    logger.info(f"Successfully connected to Backblaze B2 bucket: {BUCKET_NAME}")
-except B2Error as e:
-    logger.error(f"Failed to authorize Backblaze B2: {str(e)}")
-    raise
-
 # Set up parameters
-auth_key = os.environ.get("KMA_AUTH_KEY", "LoBU7l_-QDuAVO5f_iA7ZQ")
+auth_key = os.getenv("KMA_AUTH_KEY", "LoBU7l_-QDuAVO5f_iA7ZQ")  # Fallback to hard-coded if env var not set
 base_url = "https://apihub.kma.go.kr/api/typ05/api/GK2A/LE2/SWRAD/KO/data"
 output_dir = os.path.join(os.path.dirname(__file__), 'data', 'nc_files')
 db_path = os.path.join(os.path.dirname(__file__), 'data', 'ghi_data.db')
@@ -53,7 +34,7 @@ proj = "+proj=lcc +lat_0=38 +lon_0=126 +lat_1=30 +lat_2=60 +x_0=0 +y_0=0 +datum=
 extent = (-899000, 899000, -899000, 899000)
 seoul_bbox = {"min_lon": 126.8, "max_lon": 127.2, "min_lat": 37.4, "max_lat": 37.7}
 
-# Define the 20x20 grid directly from locations_df
+# Define the 20x20 grid directly from locations_df (consistent with other scripts)
 coords = [(lat, lon) for lat in np.linspace(37.4, 37.7, 20) for lon in np.linspace(126.8, 127.2, 20)]
 locations_df = pd.DataFrame(coords, columns=['lat', 'lon'])
 locations_df['nx'] = locations_df.index // 20
@@ -125,46 +106,15 @@ except Exception as e:
     logger.error(f"Error setting up database: {e}")
     raise
 
+
 # Function to get the current row count in the database
 def get_row_count():
     cursor.execute("SELECT COUNT(*) FROM ghi_data")
     count = cursor.fetchone()[0]
     return count
 
-# Upload new or updated .nc files to Backblaze B2
-def upload_nc_files(local_dir):
-    local_nc_dir = os.path.join(os.path.dirname(__file__), local_dir)
-    if not os.path.exists(local_nc_dir):
-        logger.warning(f"Local directory {local_nc_dir} does not exist, skipping upload.")
-        return
-    os.makedirs(local_nc_dir, exist_ok=True)
-    for file_name in os.listdir(local_nc_dir):
-        if file_name.endswith('.nc'):
-            local_path = os.path.join(local_nc_dir, file_name)
-            remote_path = f"nc_files/{file_name}"
-            try:
-                if not bucket.get_file_info_by_name(remote_path):
-                    logger.info(f"Uploading {file_name} to Backblaze B2")
-                    bucket.upload_local_file(local_path=local_path, file_name=remote_path)
-                else:
-                    logger.info(f"{file_name} already exists in Backblaze B2, skipping upload.")
-            except B2Error as e:
-                logger.error(f"Failed to upload {file_name}: {str(e)}")
 
-# Download .nc files from Backblaze B2
-def download_nc_files():
-    local_nc_dir = os.path.join(os.path.dirname(__file__), 'data', 'nc_files')
-    os.makedirs(local_nc_dir, exist_ok=True)
-    try:
-        for file in bucket.ls("nc_files/").entries:
-            local_file = os.path.join(local_nc_dir, file.file_name.split('/')[-1])
-            if not os.path.exists(local_file):
-                logger.info(f"Downloading {file.file_name} from Backblaze B2")
-                bucket.download_file_by_name(file.file_name, local_file)
-    except B2Error as e:
-        logger.error(f"Failed to download files from Backblaze B2: {str(e)}")
-
-# Solar geometry functions
+# Solar geometry functions (consistent with other scripts)
 def calculate_zenith_angle(timestamp, latitude, longitude, standard_meridian=135):
     lat_rad = np.radians(latitude)
     day_of_year = timestamp.timetuple().tm_yday
@@ -182,10 +132,12 @@ def calculate_zenith_angle(timestamp, latitude, longitude, standard_meridian=135
     zenith_angle = np.degrees(np.arccos(np.clip(cos_zenith, -1, 1)))
     return zenith_angle, hour_angle, declination
 
+
 def calc_solar_altitude(timestamp, latitude, longitude):
     zenith_angle, _, _ = calculate_zenith_angle(timestamp, latitude, longitude)
     solar_altitude = 90 - zenith_angle
     return solar_altitude
+
 
 def calc_solar_azimuth(zenith, hour_angle, declination, latitude):
     zenith_rad = np.radians(zenith)
@@ -197,6 +149,7 @@ def calc_solar_azimuth(zenith, hour_angle, declination, latitude):
     azimuth = np.degrees(np.arctan2(sin_az, cos_az))
     azimuth = (azimuth + 360) % 360
     return azimuth
+
 
 # DISC Method for decomposing GHI into DNI and DHI
 def disc_method(ghi, zenith_angle, timestamp):
@@ -241,3 +194,231 @@ def disc_method(ghi, zenith_angle, timestamp):
     dni = max(0, dni)
     dhi = ghi - dni * cos_zenith if not np.isnan(dni) else 0.0
     return dni, dhi
+
+
+# Retry-safe downloader with nearest timestamp fallback
+def download_file(original_time_str, search_window_minutes=30):
+    file_name = f"gk2a_ami_le2_swrad_ko_{original_time_str}.nc"
+    file_path = os.path.join(output_dir, file_name)
+    url = f"{base_url}?date={original_time_str}&authKey={auth_key}"
+
+    for attempt in range(5):
+        try:
+            response = requests.get(url, timeout=30)
+            if response.status_code == 200:
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+                logger.info(f"Downloaded: {file_name}")
+                return file_path, original_time_str
+            elif response.status_code == 404:
+                logger.warning(f"Attempt {attempt + 1}/5 - File not yet available: {file_name} (404)")
+            else:
+                logger.warning(
+                    f"Attempt {attempt + 1}/5 - Failed to download: {file_name}, Status: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Attempt {attempt + 1}/5 - Error downloading {file_name}: {str(e)}")
+
+        if attempt < 4:
+            time.sleep(5 * (2 ** attempt))
+
+    logger.warning(f"All 5 retries failed for {file_name}. Attempting to fetch nearest available timestamp...")
+
+    base_time = datetime.strptime(original_time_str, "%Y%m%d%H%M")
+    search_offsets = [0, -10, 10, -20, 20, -30, 30]
+    for offset in search_offsets[1:]:
+        nearby_time = base_time + timedelta(minutes=offset)
+        nearby_time_str = nearby_time.strftime("%Y%m%d%H%M")
+        file_name = f"gk2a_ami_le2_swrad_ko_{nearby_time_str}.nc"
+        file_path = os.path.join(output_dir, file_name)
+        url = f"{base_url}?date={nearby_time_str}&authKey={auth_key}"
+
+        logger.info(
+            f"Attempting to download nearest file: {file_name} (offset {offset} minutes) for original timestamp {original_time_str}")
+        for attempt in range(2):
+            try:
+                response = requests.get(url, timeout=30)
+                if response.status_code == 200:
+                    with open(file_path, 'wb') as f:
+                        f.write(response.content)
+                    logger.info(f"Downloaded nearest file: {file_name} for original timestamp {original_time_str}")
+                    return file_path, original_time_str
+                elif response.status_code == 404:
+                    logger.warning(f"Attempt {attempt + 1}/2 - File not yet available: {file_name} (404)")
+                else:
+                    logger.warning(
+                        f"Attempt {attempt + 1}/2 - Failed to download: {file_name}, Status: {response.status_code}")
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Attempt {attempt + 1}/2 - Error downloading {file_name}: {str(e)}")
+            if attempt < 1:
+                time.sleep(5 * (2 ** attempt))
+
+    logger.error(
+        f"No nearby file found for {original_time_str} within ±{search_window_minutes} minutes. Skipping timestamp.")
+    return None, original_time_str
+
+
+# Process NetCDF file and compute DNI, DHI, and solar geometry
+def process_file(file_path, timestamp, actual_time_str):
+    try:
+        dataset = nc.Dataset(file_path)
+        dsr = dataset.variables['DSR'][:]
+        dsr = np.flipud(dsr)
+
+        if dsr.shape != (900, 900):
+            logger.error(f"Error: Unexpected dimensions {dsr.shape}")
+            return []
+
+        data = dsr[row_start:row_end, col_start:col_end]
+        if data.shape != (20, 20):
+            logger.error(f"Error: Subset not 20x20: {data.shape}")
+            return []
+
+        rows_to_insert = []
+        timestamp_kst = timestamp + timedelta(hours=9)  # Convert UTC to KST
+        for row in range(20):
+            for col in range(20):
+                full_row = row_start + row
+                full_col = col_start + col
+                x = extent[0] + full_col * pixel_size_x + pixel_size_x / 2
+                y = extent[3] - full_row * pixel_size_y - pixel_size_y / 2
+                ghi = float(data[row, col]) if not np.isnan(data[row, col]) else None
+
+                # Use lat, lon directly from locations_df
+                idx = row * 20 + col
+                lat = locations_df.iloc[idx]['lat']
+                lon = locations_df.iloc[idx]['lon']
+
+                if ghi is None or ghi < 0:
+                    logger.warning(f"Invalid GHI value {ghi} at row={row}, col={col} in {file_path}. Skipping pixel.")
+                    continue
+
+                # Compute solar geometry
+                zenith_angle, hour_angle, declination = calculate_zenith_angle(timestamp_kst, lat, lon)
+                solar_altitude = calc_solar_altitude(timestamp_kst, lat, lon)
+                solar_azimuth = calc_solar_azimuth(zenith_angle, hour_angle, declination, lat)
+
+                # Validate solar geometry parameters
+                if not all(np.isfinite([zenith_angle, solar_altitude, solar_azimuth])):
+                    logger.warning(
+                        f"Invalid solar geometry at row={row}, col={col}: zenith={zenith_angle}, altitude={solar_altitude}, azimuth={solar_azimuth}")
+                    continue
+
+                # Compute DNI and DHI using DISC method
+                dni, dhi = disc_method(ghi, zenith_angle, timestamp_kst)
+
+                # Validate DNI and DHI
+                if not all(np.isfinite([dni, dhi])) or dni < 0 or dhi < 0:
+                    logger.warning(f"Invalid DNI/DHI at row={row}, col={col}: DNI={dni}, DHI={dhi}")
+                    continue
+
+                rows_to_insert.append((
+                    timestamp_kst.strftime("%Y-%m-%d %H:%M:%S"),
+                    float(ghi), float(dni), float(dhi),
+                    float(x), float(y), float(lat), float(lon),
+                    float(zenith_angle), float(solar_altitude), float(solar_azimuth)
+                ))
+        logger.info(
+            f"Processed {os.path.basename(file_path)} (used for timestamp {timestamp_kst.strftime('%Y-%m-%d %H:%M:%S')}): {len(rows_to_insert)} pixels prepared for insertion")
+        return rows_to_insert
+    except Exception as e:
+        logger.error(f"Error processing {file_path}: {str(e)}")
+        return []
+    finally:
+        try:
+            dataset.close()
+        except:
+            pass
+
+
+# Clean up old data (extended to 24 hours for future fine-tuning)
+def cleanup_old_data():
+    try:
+        cutoff_time = (datetime.now() - timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+        cursor.execute("DELETE FROM ghi_data WHERE timestamp < ?", (cutoff_time,))
+        conn.commit()
+        logger.info(f"Cleaned up data older than {cutoff_time}. Rows deleted: {cursor.rowcount}")
+    except Exception as e:
+        logger.error(f"Error during database cleanup: {str(e)}")
+
+
+# Fetch and update data every 30 minutes
+def fetch_and_update_data():
+    while True:
+        now = datetime.now().replace(second=0, microsecond=0)
+        minute = now.minute
+        if minute < 30:
+            now_aligned = now.replace(minute=0)
+        else:
+            now_aligned = now.replace(minute=30)
+
+        # Skip nighttime (20:00 to 03:00 KST)
+        current_hour = now.hour
+        if current_hour >= 20 or current_hour < 3:
+            next_run = (now + timedelta(days=1)).replace(hour=3, minute=0, second=0, microsecond=0)
+            if current_hour < 3:
+                next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
+            sleep_seconds = (next_run - now).total_seconds()
+            logger.info(
+                f"Current time {now} is in restricted window (20:00-03:00). Sleeping for {sleep_seconds / 60:.2f} minutes until {next_run}")
+            time.sleep(sleep_seconds)
+            continue
+
+        end_time = now_aligned - timedelta(minutes=30)
+        start_time = end_time - timedelta(hours=4)
+
+        timestamps = pd.date_range(start=start_time, end=end_time, freq='30min')
+        time_strings = [t.strftime("%Y%m%d%H%M") for t in timestamps]
+
+        logger.info(f"Fetching data from {start_time} to {end_time} at {now}")
+        logger.info(f"Database row count before insert: {get_row_count()}")
+
+        total_entries = 0
+        skipped_files = 0
+        for time_str, timestamp in zip(time_strings, timestamps):
+            timestamp_utc = timestamp - timedelta(hours=9)
+            time_str_utc = timestamp_utc.strftime("%Y%m%d%H%M")
+
+            file_path, actual_time_str = download_file(time_str_utc)
+            if file_path:
+                rows = process_file(file_path, timestamp_utc, actual_time_str)
+            else:
+                skipped_files += 1
+                logger.warning(f"No data available for {timestamp}. Skipping timestamp.")
+                continue
+
+            if rows:
+                try:
+                    cursor.executemany(
+                        "INSERT OR REPLACE INTO ghi_data (timestamp, GHI, DNI, DHI, X, Y, lat, lon, Zenith_Angle, Solar_Altitude, Solar_Azimuth) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        rows)
+                    conn.commit()
+                    total_entries += cursor.rowcount
+                    logger.info(f"Inserted {cursor.rowcount} new pixels for timestamp {timestamp}")
+                    logger.info(f"Database row count after insert: {get_row_count()}")
+                except Exception as e:
+                    logger.error(f"Error inserting data for {timestamp}: {str(e)}")
+            else:
+                skipped_files += 1
+
+        logger.info(f"Total number of entries inserted: {total_entries}")
+        logger.info(f"Number of skipped files: {skipped_files}")
+        logger.info(f"GHI data saved to SQLite DB: {db_path}")
+
+        cleanup_old_data()
+
+        next_update = now_aligned + timedelta(minutes=30)
+        sleep_seconds = (next_update - now).total_seconds()
+        logger.info(f"Sleeping for {sleep_seconds / 60:.2f} minutes until next update at {next_update}")
+        time.sleep(sleep_seconds)
+
+
+# Main execution
+if __name__ == "__main__":
+    try:
+        fetch_and_update_data()
+    except KeyboardInterrupt:
+        logger.info("Stopped by user.")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+    finally:
+        conn.close()
